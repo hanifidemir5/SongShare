@@ -26,21 +26,23 @@ export default function HomePage() {
 
   async function addSong(table: "recommended_songs" | "favorite_songs", song: Omit<Song, "id">) {
     const { data, error } = await supabase.from(table).insert([{ id: crypto.randomUUID(), ...song }]).select();
-    if (error) console.error(error);
-    else {
-      if (table === "recommended_songs") setRecommended([data![0], ...recommended]);
-      else setFavorites([data![0], ...favorites]);
-    }
+    if (data && data.length > 0) {
+      const newSong = data[0];
+      if (table === "recommended_songs")
+        setRecommended([newSong, ...recommended]);
+      else
+        setFavorites([newSong, ...favorites]);
+    } 
   }
 
   async function editSong(table: "recommended_songs" | "favorite_songs", id: string, song: Omit<Song, "id">) {
     const { data, error } = await supabase.from(table).update(song).eq("id", id).select();
-    if (error) console.error(error);
-    else {
+    if (data && data.length > 0) {
+      const updated = data[0];
       if (table === "recommended_songs")
-        setRecommended(recommended.map(s => (s.id === id ? data![0] : s)));
+        setRecommended(recommended.map(s => (s.id === id ? updated : s)));
       else
-        setFavorites(favorites.map(s => (s.id === id ? data![0] : s)));
+        setFavorites(favorites.map(s => (s.id === id ? updated : s)));
     }
   }
 

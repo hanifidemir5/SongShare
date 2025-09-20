@@ -18,6 +18,14 @@ export default function SongTable({ title, songs, onAdd, onEdit, onDelete }: Pro
     url: "",
   });
 
+  // 🔹 Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5; // bir sayfada kaç şarkı gözüksün?
+
+  const totalPages = Math.ceil(songs.length / itemsPerPage);
+  const startIdx = (currentPage - 1) * itemsPerPage;
+  const currentSongs = songs.slice(startIdx, startIdx + itemsPerPage);
+
   function handleSubmit() {
     if (!form.title.trim() || !form.artist.trim()) return;
 
@@ -37,10 +45,9 @@ export default function SongTable({ title, songs, onAdd, onEdit, onDelete }: Pro
       <h2 className="text-xl font-semibold">{title}</h2>
 
       {/* Desktop & Tablet (Table Layout) */}
-      <table className="hidden md:table w-full border-collapse">
+      <table className="hidden md:table w-full border-collapse min-h-48">
         <thead>
           <tr className="text-left text-[var(--muted)] border-b border-gray-700 text-sm">
-            <th className="p-2">#</th>
             <th className="p-2">Şarkı</th>
             <th className="p-2">Sanatçı</th>
             <th className="p-2">Link</th>
@@ -48,7 +55,7 @@ export default function SongTable({ title, songs, onAdd, onEdit, onDelete }: Pro
           </tr>
         </thead>
         <tbody>
-          {songs.map((song, idx) => (
+          {currentSongs.map((song) => (
             <tr key={song.id} className="border-b border-gray-800 text-sm">
               <td className="p-2 font-medium truncate max-w-[150px]">{song.title}</td>
               <td className="p-2 truncate max-w-[150px]">{song.artist}</td>
@@ -90,15 +97,13 @@ export default function SongTable({ title, songs, onAdd, onEdit, onDelete }: Pro
       </table>
 
       {/* Mobile (Card Layout) */}
-      <div className="md:hidden space-y-3">
-        {songs.map((song) => (
+      <div className="md:hidden space-y-3 min-h-28">
+        {currentSongs.map((song) => (
           <div
             key={song.id}
             className="p-3 border border-gray-700 rounded text-xs space-y-1 flex flex-col items-start justify-between"
           >
-            <div className="font-semibold">
-               {song.title}
-            </div>
+            <div className="font-semibold">{song.title}</div>
             <div className="text-[var(--muted)]">{song.artist}</div>
             <div className="flex gap-2 mt-2 justify-end w-full">
               {song.url ? (
@@ -132,6 +137,27 @@ export default function SongTable({ title, songs, onAdd, onEdit, onDelete }: Pro
             </div>
           </div>
         ))}
+      </div>
+
+      {/* Pagination Controls */}
+      <div className="flex justify-center gap-2 mt-4">
+        <button
+          className="btn !px-2 !py-1 text-xs"
+          disabled={currentPage === 1}
+          onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+        >
+          Önceki
+        </button>
+        <span className="px-2 text-sm">
+          {currentPage} / {totalPages}
+        </span>
+        <button
+          className="btn !px-2 !py-1 text-xs"
+          disabled={currentPage === totalPages}
+          onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+        >
+          Sonraki
+        </button>
       </div>
 
       {/* Form */}

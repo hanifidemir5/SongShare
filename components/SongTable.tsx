@@ -12,7 +12,11 @@ type Props = {
 export default function SongTable({ title, songs, onAdd, onEdit, onDelete }: Props) {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState<Omit<Song, "id">>({ title: "", artist: "", url: "" });
+  const [form, setForm] = useState<Omit<Song, "id">>({
+    title: "",
+    artist: "",
+    url: "",
+  });
 
   function handleSubmit() {
     if (!form.title.trim() || !form.artist.trim()) return;
@@ -31,9 +35,11 @@ export default function SongTable({ title, songs, onAdd, onEdit, onDelete }: Pro
   return (
     <section className="card space-y-4">
       <h2 className="text-xl font-semibold">{title}</h2>
-      <table className="w-full border-collapse">
+
+      {/* Desktop & Tablet (Table Layout) */}
+      <table className="hidden md:table w-full border-collapse">
         <thead>
-          <tr className="text-left text-[var(--muted)] border-b border-gray-700">
+          <tr className="text-left text-[var(--muted)] border-b border-gray-700 text-sm">
             <th className="p-2">#</th>
             <th className="p-2">Şarkı</th>
             <th className="p-2">Sanatçı</th>
@@ -43,22 +49,26 @@ export default function SongTable({ title, songs, onAdd, onEdit, onDelete }: Pro
         </thead>
         <tbody>
           {songs.map((song, idx) => (
-            <tr key={song.id} className="border-b border-gray-800">
-              <td className="p-2">{idx + 1}</td>
-              <td className="p-2 font-medium">{song.title}</td>
-              <td className="p-2">{song.artist}</td>
+            <tr key={song.id} className="border-b border-gray-800 text-sm">
+              <td className="p-2 font-medium truncate max-w-[150px]">{song.title}</td>
+              <td className="p-2 truncate max-w-[150px]">{song.artist}</td>
               <td className="p-2">
                 {song.url ? (
-                  <a href={song.url} target="_blank" rel="noreferrer" className="btn !px-3 !py-1 text-sm">
+                  <a
+                    href={song.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="btn !px-3 !py-1 text-xs"
+                  >
                     Dinle
                   </a>
                 ) : (
-                  <span className="badge">yok</span>
+                  <span className="badge text-xs">yok</span>
                 )}
               </td>
-              <td className="p-2 flex gap-2">
+              <td className="p-2 flex gap-2 flex-wrap">
                 <button
-                  className="btn !bg-yellow-600 hover:!bg-yellow-500 !px-3 !py-1 text-sm"
+                  className="btn !bg-yellow-600 hover:!bg-yellow-500 !px-2 !py-1 text-xs"
                   onClick={() => {
                     setEditingId(song.id);
                     setForm({ title: song.title, artist: song.artist, url: song.url });
@@ -68,7 +78,7 @@ export default function SongTable({ title, songs, onAdd, onEdit, onDelete }: Pro
                   Düzenle
                 </button>
                 <button
-                  className="btn !bg-red-600 hover:!bg-red-500 !px-3 !py-1 text-sm"
+                  className="btn !bg-red-600 hover:!bg-red-500 !px-2 !py-1 text-xs"
                   onClick={() => onDelete(song.id)}
                 >
                   Sil
@@ -79,6 +89,52 @@ export default function SongTable({ title, songs, onAdd, onEdit, onDelete }: Pro
         </tbody>
       </table>
 
+      {/* Mobile (Card Layout) */}
+      <div className="md:hidden space-y-3">
+        {songs.map((song) => (
+          <div
+            key={song.id}
+            className="p-3 border border-gray-700 rounded text-xs space-y-1 flex flex-col items-start justify-between"
+          >
+            <div className="font-semibold">
+               {song.title}
+            </div>
+            <div className="text-[var(--muted)]">{song.artist}</div>
+            <div className="flex gap-2 mt-2 justify-end w-full">
+              {song.url ? (
+                <a
+                  href={song.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="btn !px-2 !py-1 text-xs"
+                >
+                  Dinle
+                </a>
+              ) : (
+                <span className="badge text-xs">yok</span>
+              )}
+              <button
+                className="btn !bg-yellow-600 hover:!bg-yellow-500 !px-2 !py-1 text-xs"
+                onClick={() => {
+                  setEditingId(song.id);
+                  setForm({ title: song.title, artist: song.artist, url: song.url });
+                  setShowForm(true);
+                }}
+              >
+                Düzenle
+              </button>
+              <button
+                className="btn !bg-red-600 hover:!bg-red-500 !px-2 !py-1 text-xs"
+                onClick={() => onDelete(song.id)}
+              >
+                Sil
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Form */}
       {showForm && (
         <div className="space-y-2">
           <input

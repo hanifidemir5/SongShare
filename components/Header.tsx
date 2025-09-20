@@ -2,7 +2,11 @@ type Props = {
   onSearch: (q: string) => void;
 };
 
+import { usePerson } from "../app/personContext";
+
 export default function Header({ onSearch }: Props) {
+  const { person, togglePerson } = usePerson();
+
   return (
     <header className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
       <div>
@@ -14,6 +18,9 @@ export default function Header({ onSearch }: Props) {
         placeholder="Ara: başlık / sanatçı / etiket"
         onChange={(e) => onSearch(e.target.value)}
       />
+      <button className="btn !px-3 !py-1 text-sm" onClick={togglePerson}>
+        {person}
+      </button>
     </header>
   );
 }

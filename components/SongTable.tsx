@@ -1,5 +1,6 @@
 import { useState } from "react";
-import type { Song } from "../app/types";
+import type { Platform, Song } from "../app/types";
+import { getSongInfo } from "@/app/helpers/getSongInfo";
 
 type Props = {
   title: string;
@@ -10,14 +11,18 @@ type Props = {
 };
 
 export default function SongTable({ title, songs, onAdd, onEdit, onDelete }: Props) {
-  const [showForm, setShowForm] = useState(false);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [showUpdateForm, setShowUpdateForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<Omit<Song, "id">>({
     title: "",
     artist: "",
     url: "",
+    platform: null,
   });
 
+  const [url, setUrl] = useState<string>("");
+ 
   // 🔹 Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5; // bir sayfada kaç şarkı gözüksün?
@@ -26,18 +31,24 @@ export default function SongTable({ title, songs, onAdd, onEdit, onDelete }: Pro
   const startIdx = (currentPage - 1) * itemsPerPage;
   const currentSongs = songs.slice(startIdx, startIdx + itemsPerPage);
 
-  function handleSubmit() {
-    if (!form.title.trim() || !form.artist.trim()) return;
+  async function handleSubmit() {
+    const result = await getSongInfo(url);
+    const newForm = {
+      title: result.title,
+      artist: result.artist,
+      url,
+      platform: result.platform ? (result.platform as Platform) : null,
+    };
 
     if (editingId) {
       onEdit(editingId, form);
       setEditingId(null);
     } else {
-      onAdd(form);
+      onAdd(newForm);
     }
 
-    setForm({ title: "", artist: "", url: "" });
-    setShowForm(false);
+    setForm({ title: "", artist: "", url: "" , platform:null});
+    setShowAddForm(false);
   }
 
   return (
@@ -78,8 +89,8 @@ export default function SongTable({ title, songs, onAdd, onEdit, onDelete }: Pro
                   className="btn !bg-yellow-600 hover:!bg-yellow-500 !px-2 !py-1 text-xs"
                   onClick={() => {
                     setEditingId(song.id);
-                    setForm({ title: song.title, artist: song.artist, url: song.url });
-                    setShowForm(true);
+                    setForm({ title: song.title, artist: song.artist, url: song.url, platform: song.platform });
+                    setShowUpdateForm(true);
                   }}
                 >
                   Düzenle
@@ -122,8 +133,8 @@ export default function SongTable({ title, songs, onAdd, onEdit, onDelete }: Pro
                 className="btn !bg-yellow-600 hover:!bg-yellow-500 !px-2 !py-1 text-xs"
                 onClick={() => {
                   setEditingId(song.id);
-                  setForm({ title: song.title, artist: song.artist, url: song.url });
-                  setShowForm(true);
+                  setForm({ title: song.title, artist: song.artist, url: song.url, platform: song.platform });
+                  setShowUpdateForm(true);
                 }}
               >
                 Düzenle
@@ -161,7 +172,7 @@ export default function SongTable({ title, songs, onAdd, onEdit, onDelete }: Pro
       </div>
 
       {/* Form */}
-      {showForm && (
+      {showUpdateForm && (
         <div className="space-y-2">
           <input
             className="input"
@@ -183,12 +194,12 @@ export default function SongTable({ title, songs, onAdd, onEdit, onDelete }: Pro
           />
           <div className="flex gap-2 justify-end">
             <button className="btn" onClick={handleSubmit}>
-              {editingId ? "Kaydet" : "Ekle"}
+              Güncelle
             </button>
             <button
               className="btn !bg-gray-600 hover:!bg-gray-500"
               onClick={() => {
-                setShowForm(false);
+                setShowUpdateForm(false);
                 setEditingId(null);
               }}
             >
@@ -198,9 +209,36 @@ export default function SongTable({ title, songs, onAdd, onEdit, onDelete }: Pro
         </div>
       )}
 
-      {!showForm && (
+      {showAddForm && (
+        <div className="space-y-2">
+          <input
+            className="input"
+            placeholder="URL"
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+          />
+          <div className="flex gap-2 justify-end">
+            <button className="btn" onClick={handleSubmit}>
+              Kontrol Et
+            </button>
+            <button
+              className="btn !bg-gray-600 hover:!bg-gray-500"
+              onClick={() => {
+                setShowAddForm(false);
+                setEditingId(null);
+                setForm({ title: "", artist: "", url: "" , platform: null});
+              }}
+            >
+              Vazgeç
+            </button>
+          </div>
+        </div>
+      )}
+
+
+      {!showAddForm && (
         <div className="flex justify-end">
-          <button className="btn" onClick={() => setShowForm(true)}>
+          <button className="btn" onClick={() => setShowAddForm(true)}>
             Şarkı Ekle
           </button>
         </div>

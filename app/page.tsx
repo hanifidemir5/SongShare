@@ -10,11 +10,6 @@ import { usePerson } from "./personContext";
 
 
 export default function HomePage() {
-  const [fatmas_recommended, setFatmasRecommended] = useState<Song[]>([]);
-  const [fatmas_favorites, setFatmasFavorites] = useState<Song[]>([]);
-  const [hanifis_recommended, setHanifisRecommended] = useState<Song[]>([]);
-  const [hanifis_favorites, setHanifisFavorites] = useState<Song[]>([]);
-
   const { person } = usePerson();
 
   const [songs, setSongs] = useState<Record<Person, SongState>>({
@@ -29,11 +24,12 @@ export default function HomePage() {
   async function fetchSongs(person: Person) {
     const { data: recData } = await supabase
       .from(`${person}'s_recommended_songs`)
-      .select("*");
+      .select("*").order("created_at", { ascending: false });
 
     const { data: favData } = await supabase
       .from(`${person}'s_favorite_songs`)
-      .select("*");
+      .select("*")
+      .order("created_at", { ascending: false });
 
     setSongs((prev) => ({
       ...prev,
@@ -51,7 +47,7 @@ export default function HomePage() {
     song: Omit<Song, "id">
   ) {
     const table = `${person}'s_${category}_songs`; // tablo adını dinamik oluştur
-
+    console.log(song)
     const { data, error } = await supabase
       .from(table)
       .insert([{ id: crypto.randomUUID(), ...song }])

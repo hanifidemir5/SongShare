@@ -47,7 +47,6 @@ export default function HomePage() {
     song: Omit<Song, "id">
   ) {
     const table = `${person}'s_${category}_songs`; // tablo adını dinamik oluştur
-    console.log(song)
     const { data, error } = await supabase
       .from(table)
       .insert([{ id: crypto.randomUUID(), ...song }])

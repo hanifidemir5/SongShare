@@ -9,7 +9,7 @@ export async function getSongInfo(url: string) {
       const videoId = extractYouTubeId(url);
       if (!videoId) throw new Error("Geçersiz YouTube URL");
 
-      const apiKey = process.env.REACT_APP_YOUTUBE_API_KEY; // kendi API key'in
+      const apiKey = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY; // kendi API key'in
       const response = await fetch(
         `https://www.googleapis.com/youtube/v3/videos?part=snippet&id=${videoId}&key=${apiKey}`
       );

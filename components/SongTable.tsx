@@ -41,14 +41,16 @@ export default function SongTable({ title, songs, onAdd, onEdit, onDelete }: Pro
     };
 
     if (editingId) {
-      onEdit(editingId, form);
+      onEdit(editingId, form);  
       setEditingId(null);
+      setShowUpdateForm(false);
     } else {
       onAdd(newForm);
+      setUrl("");
+      setShowAddForm(false);
     }
 
     setForm({ title: "", artist: "", url: "" , platform:null});
-    setShowAddForm(false);
   }
 
   return (
@@ -62,7 +64,8 @@ export default function SongTable({ title, songs, onAdd, onEdit, onDelete }: Pro
             <th className="p-2">Şarkı</th>
             <th className="p-2">Sanatçı</th>
             <th className="p-2">Link</th>
-            <th className="p-2">İşlemler</th>
+            <th className="p-2">Düzenle</th>
+            <th className="p-2">Sil</th>
           </tr>
         </thead>
         <tbody>
@@ -84,7 +87,7 @@ export default function SongTable({ title, songs, onAdd, onEdit, onDelete }: Pro
                   <span className="badge text-xs">yok</span>
                 )}
               </td>
-              <td className="p-2 flex gap-2 flex-wrap">
+              <td className="p-2 ">
                 <button
                   className="btn !bg-yellow-600 hover:!bg-yellow-500 !px-2 !py-1 text-xs"
                   onClick={() => {
@@ -95,6 +98,8 @@ export default function SongTable({ title, songs, onAdd, onEdit, onDelete }: Pro
                 >
                   Düzenle
                 </button>
+              </td>
+              <td>
                 <button
                   className="btn !bg-red-600 hover:!bg-red-500 !px-2 !py-1 text-xs"
                   onClick={() => onDelete(song.id)}
@@ -116,7 +121,7 @@ export default function SongTable({ title, songs, onAdd, onEdit, onDelete }: Pro
           >
             <div className="font-semibold">{song.title}</div>
             <div className="text-[var(--muted)]">{song.artist}</div>
-            <div className="flex gap-2 mt-2 justify-end w-full">
+            <div className="flex gap-2 mt-2 justify-end w-full items-center">
               {song.url ? (
                 <a
                   href={song.url}

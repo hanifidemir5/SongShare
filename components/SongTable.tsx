@@ -1,6 +1,9 @@
 import { useState } from "react";
 import type { Platform, Song } from "../app/types";
 import { getSongInfo } from "@/app/helpers/getSongInfo";
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faSpotify, faYoutube } from "@fortawesome/free-brands-svg-icons";
+import { faArrowRight } from "@fortawesome/free-solid-svg-icons";
 
 type Props = {
   title: string;
@@ -74,19 +77,37 @@ export default function SongTable({ title, songs, onAdd, onEdit, onDelete }: Pro
               <td className="p-2 font-medium truncate max-w-[150px]">{song.title}</td>
               <td className="p-2 truncate max-w-[150px]">{song.artist}</td>
               <td className="p-2">
-                {song.url ? (
-                  <a
-                    href={song.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="btn !px-3 !py-1 text-xs"
-                  >
-                    Dinle
-                  </a>
-                ) : (
-                  <span className="badge text-xs">yok</span>
-                )}
+              {song.url ? (
+                <a
+                  href={song.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="relative flex items-center gap-2 group !px-3 !py-1 text-xl overflow-hidden"
+                >
+                  {/* Ana ikon */}
+                  {song.platform === "Spotify" ? (
+                    <FontAwesomeIcon
+                      icon={faSpotify}
+                      className="text-[#1DB954] transition-transform duration-300 group-hover:-translate-x-2"
+                    />
+                  ) : (
+                    <FontAwesomeIcon
+                      icon={faYoutube}
+                      className="text-[#FF0000] transition-transform duration-300 group-hover:-translate-x-2"
+                    />
+                  )}
+
+                  {/* Ok ikonu */}
+                  <FontAwesomeIcon
+                    icon={faArrowRight}
+                    className="absolute right-12 opacity-0 translate-x-2 transition-all duration-300 group-hover:opacity-100 group-hover:translate-x-0 text-gray-400"
+                  />
+                </a>
+              ) : (
+                <span className="badge text-xs">yok</span>
+              )}
               </td>
+
               <td className="p-2 ">
                 <button
                   className="btn !bg-yellow-600 hover:!bg-yellow-500 !px-2 !py-1 text-xs"
@@ -122,18 +143,40 @@ export default function SongTable({ title, songs, onAdd, onEdit, onDelete }: Pro
             <div className="font-semibold">{song.title}</div>
             <div className="text-[var(--muted)]">{song.artist}</div>
             <div className="flex gap-2 mt-2 justify-end w-full items-center">
-              {song.url ? (
-                <a
-                  href={song.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="btn !px-2 !py-1 text-xs"
-                >
-                  Dinle
-                </a>
-              ) : (
-                <span className="badge text-xs">yok</span>
-              )}
+            {song.url ? (
+              <a
+                href={song.url}
+                target="_blank"
+                rel="noreferrer"
+                className={`
+                  relative flex items-center justify-center group 
+                  text-2xl sm:text-xl p-2 sm:p-1 rounded-full
+                  transition-all duration-300
+                  hover:scale-110 active:scale-95
+                  ${song.platform === "Spotify" ? "text-[#1DB954]" : "text-[#FF0000]"}
+                `}
+              >
+                {/* Ana ikon */}
+                <FontAwesomeIcon
+                  icon={song.platform === "Spotify" ? faSpotify : faYoutube}
+                  className="transition-transform duration-300 group-hover:-translate-x-2"
+                />
+
+                {/* Ok ikonu (sadece masaüstüde görünsün) */}
+                <FontAwesomeIcon
+                  icon={faArrowRight}
+                  className={`
+                    absolute right-10 opacity-0 translate-x-2 
+                    transition-all duration-300 
+                    group-hover:opacity-100 group-hover:translate-x-0
+                    hidden sm:block text-gray-400
+                  `}
+                />
+              </a>
+            ) : (
+              <span className="badge text-xs">yok</span>
+            )}
+
               <button
                 className="btn !bg-yellow-600 hover:!bg-yellow-500 !px-2 !py-1 text-xs"
                 onClick={() => {

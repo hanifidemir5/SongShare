@@ -6,8 +6,10 @@ import SongTable from "@/components/SongTable";
 import type { Song } from "./types";
 import { supabase } from "../lib/supabaseClient"
 import {Person, SongState} from "./types"
-import { usePerson } from "./personContext";
-
+import { usePerson } from "./contexts/personContext";
+import { useSpotifyAuth } from "./contexts/SpotifyAuthContext";
+import { parseTokenFromHash } from "./helpers/authUtils";
+import { useYouTubeAuth } from "./contexts/YoutubeAuthContext";
 
 export default function HomePage() {
   const { person } = usePerson();
@@ -107,7 +109,6 @@ export default function HomePage() {
       }));
     }
   }
-
 
   async function deleteSong(
     person: Person,

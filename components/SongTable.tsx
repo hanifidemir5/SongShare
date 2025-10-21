@@ -1,9 +1,16 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Platform, Song } from "../app/types";
 import { getSongInfo } from "@/app/helpers/getSongInfo";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faSpotify, faYoutube } from "@fortawesome/free-brands-svg-icons";
 import { faArrowRight } from "@fortawesome/free-solid-svg-icons";
+import { useSpotifyAuth } from "../app/contexts/SpotifyAuthContext";
+import { getUserPlaylists as getSpotifyPlaylists} from "@/app/helpers/spotifyApi";
+import { getUserPlaylists as getYouTubePlaylists} from "@/app/helpers/youtubeApi";
+import { addToSpotifyPlaylist } from "@/app/helpers/addToSpotifyPlaylist";
+import { useYouTubeAuth } from "@/app/contexts/YoutubeAuthContext";
+import { addToYouTubePlaylist } from "@/app/helpers/addToYoutubePlaylist";
+
 
 type Props = {
   title: string;
@@ -24,15 +31,37 @@ export default function SongTable({ title, songs, onAdd, onEdit, onDelete }: Pro
     platform: null,
   });
 
+  const [showPlaylistModal, setShowPlaylistModal] = useState(false);
+  const [songToAdd, setSongToAdd] = useState<Song | null>(null);
+  const [selectedPlaylistInModal, setSelectedPlaylistInModal] = useState<string | null>(null);
+  const [selectedPlatformInModal, setSelectedPlatformInModal] = useState<string | null>(null);
+
+
+  const { spotifyToken, isLoggedInWithSpotify } = useSpotifyAuth();
+  const { youtubeToken, isLoggedInWithYouTube } = useYouTubeAuth();
+  const [spotifyPlaylists, setSpotifyPlaylists] = useState<any[]>([]);
+  const [youtubePlaylists, setYoutubePlaylists] = useState<any[]>([]);
   const [url, setUrl] = useState<string>("");
  
-  // 🔹 Pagination state
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 5; // bir sayfada kaç şarkı gözüksün?
+  const itemsPerPage = 5;
 
   const totalPages = Math.ceil(songs.length / itemsPerPage);
   const startIdx = (currentPage - 1) * itemsPerPage;
   const currentSongs = songs.slice(startIdx, startIdx + itemsPerPage);
+
+  useEffect(() => {
+    if (isLoggedInWithSpotify && spotifyToken) {
+      getSpotifyPlaylists(spotifyToken).then(setSpotifyPlaylists).catch(console.error);
+    }
+  }, [isLoggedInWithSpotify, spotifyToken]);
+
+  useEffect(() => {
+
+    if (isLoggedInWithYouTube && youtubeToken) {
+      getYouTubePlaylists(youtubeToken).then(setYoutubePlaylists).catch(console.error);
+    }
+  }, [youtubeToken, isLoggedInWithYouTube]);
 
   async function handleSubmit() {
     const result = await getSongInfo(url);
@@ -66,7 +95,7 @@ export default function SongTable({ title, songs, onAdd, onEdit, onDelete }: Pro
           <tr className="text-left text-[var(--muted)] border-b border-gray-700 text-sm">
             <th className="p-2">Şarkı</th>
             <th className="p-2">Sanatçı</th>
-            <th className="p-2">Link</th>
+            <th className="p-2">PlayListe Ekle</th>
             <th className="p-2">Düzenle</th>
             <th className="p-2">Sil</th>
           </tr>
@@ -76,7 +105,7 @@ export default function SongTable({ title, songs, onAdd, onEdit, onDelete }: Pro
             <tr key={song.id} className="border-b border-gray-800 text-sm">
               <td className="p-2 font-medium truncate max-w-[150px]">{song.title}</td>
               <td className="p-2 truncate max-w-[150px]">{song.artist}</td>
-              <td className="p-2">
+              {/* <td className="p-2">
               {song.url ? (
                 <a
                   href={song.url}
@@ -84,7 +113,6 @@ export default function SongTable({ title, songs, onAdd, onEdit, onDelete }: Pro
                   rel="noreferrer"
                   className="relative flex items-center gap-2 group !px-3 !py-1 text-xl overflow-hidden"
                 >
-                  {/* Ana ikon */}
                   {song.platform === "Spotify" ? (
                     <FontAwesomeIcon
                       icon={faSpotify}
@@ -97,7 +125,6 @@ export default function SongTable({ title, songs, onAdd, onEdit, onDelete }: Pro
                     />
                   )}
 
-                  {/* Ok ikonu */}
                   <FontAwesomeIcon
                     icon={faArrowRight}
                     className="absolute right-12 opacity-0 translate-x-2 transition-all duration-300 group-hover:opacity-100 group-hover:translate-x-0 text-gray-400"
@@ -106,6 +133,21 @@ export default function SongTable({ title, songs, onAdd, onEdit, onDelete }: Pro
               ) : (
                 <span className="badge text-xs">yok</span>
               )}
+              </td> */}
+              <td className="p-2">
+                {isLoggedInWithSpotify && spotifyPlaylists.length > 0 || isLoggedInWithYouTube && youtubePlaylists.length > 0 ? (
+                    <button
+                      className="btn !bg-green-600 hover:!bg-green-500 !px-2 !py-1 text-xs"
+                      onClick={() => {
+                        setSongToAdd(song);
+                        setShowPlaylistModal(true);
+                      }}
+                    >
+                      Ekle
+                    </button>
+                ) : (
+                  <span className="text-gray-500 text-xs">Login to add</span>
+                )}
               </td>
 
               <td className="p-2 ">
@@ -291,6 +333,95 @@ export default function SongTable({ title, songs, onAdd, onEdit, onDelete }: Pro
           </button>
         </div>
       )}
+
+      {showPlaylistModal && songToAdd && (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div className="bg-gray-900 p-6 rounded space-y-4 w-80">
+          <h3 className="text-lg font-semibold">Select Playlist</h3>
+          <select
+            value={selectedPlatformInModal ?? ""}
+            onChange={(e) => setSelectedPlatformInModal(e.target.value)}
+            className="bg-gray-800 text-white w-full rounded px-2 py-1"
+          >
+            <option value="">Select a platform</option>
+            {isLoggedInWithYouTube &&
+              <option key={"youtube"} value={"Youtube"}>Youtube</option>
+            }
+            {
+              isLoggedInWithSpotify &&
+              <option key={"spotify"} value={"Spotify"}>Spotify</option>
+            }
+          </select>
+
+          { selectedPlatformInModal == "Spotify" &&
+              <select
+              value={selectedPlaylistInModal ?? ""}
+              onChange={(e) => setSelectedPlaylistInModal(e.target.value)}
+              className="bg-gray-800 text-white w-full rounded px-2 py-1"
+            >
+              <option value="">Select a playlist</option>
+              {spotifyPlaylists.map((pl) => (
+                <option key={pl.id} value={pl.id}>{pl.name}</option>
+              ))}
+            </select>
+          }
+
+          { selectedPlatformInModal == "Youtube" &&
+              <select
+              value={selectedPlaylistInModal ?? ""}
+              onChange={(e) => setSelectedPlaylistInModal(e.target.value)}
+              className="bg-gray-800 text-white w-full rounded px-2 py-1"
+            >
+              <option value="">Select a playlist</option>
+              {youtubePlaylists.map((pl) => (
+                <option key={pl.id} value={pl.id}>{pl.title}</option>
+              ))}
+            </select>
+          }
+          
+          <div className="flex justify-end gap-2">
+          { selectedPlatformInModal == "Spotify" &&       
+            <button
+              className="btn !bg-green-600 hover:!bg-green-500 !px-2 !py-1 text-xs"
+              onClick={() => {
+                addToSpotifyPlaylist(spotifyToken,songToAdd, selectedPlaylistInModal);
+                setShowPlaylistModal(false);
+                setSongToAdd(null);
+                setSelectedPlaylistInModal(null);
+              }}
+            >
+              Add
+            </button>
+          }
+          {
+            selectedPlatformInModal == "Youtube" &&  
+            <button
+              className="btn !bg-green-600 hover:!bg-green-500 !px-2 !py-1 text-xs"
+              onClick={() => {
+                addToYouTubePlaylist(youtubeToken, songToAdd, selectedPlaylistInModal);
+                setShowPlaylistModal(false);
+                setSongToAdd(null);
+                setSelectedPlaylistInModal(null);
+              }}
+            >
+              Add
+            </button>
+          }
+            <button
+              className="btn !bg-gray-600 hover:!bg-gray-500 !px-2 !py-1 text-xs"
+              onClick={() => {
+                setShowPlaylistModal(false);
+                setSongToAdd(null);
+                setSelectedPlaylistInModal(null);
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+      )}
+
     </section>
   );
 }

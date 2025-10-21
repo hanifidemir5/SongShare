@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { PersonProvider } from "./personContext";
+import { PersonProvider } from "./contexts/personContext";
+import { SpotifyAuthProvider } from "./contexts/SpotifyAuthContext";
+import { YouTubeAuthProvider } from "./contexts/YoutubeAuthContext";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -13,9 +15,13 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <PersonProvider>
-      <html lang="tr">
-        <body className={inter.className}>{children}</body>
-      </html>
+      <YouTubeAuthProvider>
+        <SpotifyAuthProvider>
+          <html lang="tr">
+            <body className={inter.className}>{children}</body>
+          </html>
+        </SpotifyAuthProvider>
+      </YouTubeAuthProvider>
     </PersonProvider>
   );
 }

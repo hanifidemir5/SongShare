@@ -20,14 +20,14 @@ export default function LoginButtons({
           onClick={logoutSpotify}
           className="btn !bg-red-700 hover:!bg-red-600"
         >
-          Spotify'dan Çıkış Yap
+          {"Spotify'dan Çıkış Yap"}
         </button>
       ) : (
         <button
           onClick={loginWithSpotify}
           className="btn !bg-green-600 hover:!bg-green-500"
         >
-          Spotify'la Giriş Yap
+          {"Spotify'la Giriş Yap"}
         </button>
       )}
 
@@ -37,14 +37,14 @@ export default function LoginButtons({
           onClick={logoutYoutube}
           className="btn !bg-red-700 hover:!bg-red-600"
         >
-          YouTube'dan Çıkış Yap
+          {"YouTube'dan Çıkış Yap"}
         </button>
       ) : (
         <button
           onClick={loginWithYouTube}
           className="btn !bg-[#FF0000] hover:!bg-[#FF3333] text-white shadow-md"
         >
-          YouTube'la Giriş Yap
+          {"YouTube'la Giriş Yap"}
         </button>
       )}
     </div>

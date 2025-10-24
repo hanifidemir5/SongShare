@@ -7,9 +7,6 @@ import type { Song } from "./types";
 import { supabase } from "../lib/supabaseClient"
 import {Person, SongState} from "./types"
 import { usePerson } from "./contexts/personContext";
-import { useSpotifyAuth } from "./contexts/SpotifyAuthContext";
-import { parseTokenFromHash } from "./helpers/authUtils";
-import { useYouTubeAuth } from "./contexts/YoutubeAuthContext";
 
 export default function HomePage() {
   const { person } = usePerson();
@@ -74,7 +71,6 @@ export default function HomePage() {
       }));
     }
   }
-
 
   async function editSong(
     person: Person,

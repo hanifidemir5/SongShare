@@ -1,8 +1,13 @@
+import { getSpotifyIdFromYouTubeUrl } from "./getSpotifyIdFromYouTubeUrl";
+import { getYouTubeIdFromSpotifyUrl } from "./getYouTubeUrlFromSpotify";
+import { getSpotifyAccessToken } from "./spotifyTokenManager";
+
 export async function getSongInfo(url: string) {
   try {
     // 1️⃣ URL'nin YouTube mu Spotify mı olduğuna bakalım
     const isYouTube = url.includes("youtube.com") || url.includes("youtu.be");
     const isSpotify = url.includes("spotify.com/track");
+    const spotifyAccessToken = await getSpotifyAccessToken();
 
     if (isYouTube) {
       // 🔸 YouTube işlemi
@@ -19,8 +24,10 @@ export async function getSongInfo(url: string) {
 
       const title = data.items[0].snippet.title;
       const channel = data.items[0].snippet.channelTitle;
-
-      return { platform: "YouTube", title, artist: channel };
+      const spotifyTrackId = await getSpotifyIdFromYouTubeUrl(url,process.env.NEXT_PUBLIC_YOUTUBE_API_KEY,spotifyAccessToken);
+      const spotifyUrl = `https://open.spotify.com/track/${spotifyTrackId}`;
+      
+      return {  title, artist: channel,youtubeUrl:url,spotifyUrl };
     }
 
     if (isSpotify) {
@@ -28,35 +35,19 @@ export async function getSongInfo(url: string) {
       const trackId = extractSpotifyId(url);
       if (!trackId) throw new Error("Geçersiz Spotify URL");
 
-      // Access token'ı al
-      const tokenResponse = await fetch("https://accounts.spotify.com/api/token", {
-        method: "POST",
-        headers: {
-          Authorization:
-            "Basic " +
-            btoa(
-              process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID +
-                ":" +
-                process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_SECRET
-            ),
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        body: "grant_type=client_credentials",
-      });
-
-      const tokenData = await tokenResponse.json();
-      const accessToken = tokenData.access_token;
-
       // Şarkı bilgilerini al
       const response = await fetch(`https://api.spotify.com/v1/tracks/${trackId}`, {
-        headers: { Authorization: `Bearer ${accessToken}` },
+        headers: { Authorization: `Bearer ${spotifyAccessToken}` },
       });
       const data = await response.json();
-
+      const youtubeVideoId = await getYouTubeIdFromSpotifyUrl(url,spotifyAccessToken,process.env.NEXT_PUBLIC_YOUTUBE_API_KEY);
+      const youtubeUrl = `https://www.youtube.com/watch?v=${youtubeVideoId}`;
+      
       return {
-        platform: "Spotify",
         title: data.name,
         artist: data.artists.map((a: any) => a.name).join(", "),
+        youtubeUrl:youtubeUrl,
+        spotifyUrl:url,
       };
     }
 

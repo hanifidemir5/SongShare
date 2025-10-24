@@ -13,21 +13,21 @@ export default function LoginButtons({
   logoutYoutube: () => void;
 }) {
   return (
-    <div className="flex gap-4">
+    <div className="flex justify-center gap-4">
       {/* Spotify */}
       {isSpotifyLoggedIn ? (
         <button
           onClick={logoutSpotify}
           className="btn !bg-red-700 hover:!bg-red-600"
         >
-          Log Out From Spotify
+          Spotify'dan Çıkış Yap
         </button>
       ) : (
         <button
           onClick={loginWithSpotify}
           className="btn !bg-green-600 hover:!bg-green-500"
         >
-          Login with Spotify
+          Spotify'la Giriş Yap
         </button>
       )}
 
@@ -37,14 +37,14 @@ export default function LoginButtons({
           onClick={logoutYoutube}
           className="btn !bg-red-700 hover:!bg-red-600"
         >
-          Log Out From YouTube
+          YouTube'dan Çıkış Yap
         </button>
       ) : (
         <button
           onClick={loginWithYouTube}
           className="btn !bg-[#FF0000] hover:!bg-[#FF3333] text-white shadow-md"
         >
-          Login with YouTube
+          YouTube'la Giriş Yap
         </button>
       )}
     </div>

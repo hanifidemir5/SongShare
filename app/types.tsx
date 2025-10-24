@@ -9,8 +9,8 @@ export type Song = {
   id: string;
   title: string;
   artist: string;
-  url: string;
-  platform: Platform | null;
+  youtubeUrl: string | undefined;
+  spotifyUrl: string | undefined;
 };
 
 export type Person = "Fatma" | "Hanifi";

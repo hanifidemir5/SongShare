@@ -3,7 +3,6 @@ import type { Platform, Song } from "../app/types";
 import { getSongInfo } from "@/app/helpers/getSongInfo";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faSpotify, faYoutube } from "@fortawesome/free-brands-svg-icons";
-import { faArrowRight } from "@fortawesome/free-solid-svg-icons";
 import { useSpotifyAuth } from "../app/contexts/SpotifyAuthContext";
 import { getUserPlaylists as getSpotifyPlaylists} from "@/app/helpers/spotifyApi";
 import { getUserPlaylists as getYouTubePlaylists} from "@/app/helpers/youtubeApi";
@@ -27,8 +26,8 @@ export default function SongTable({ title, songs, onAdd, onEdit, onDelete }: Pro
   const [form, setForm] = useState<Omit<Song, "id">>({
     title: "",
     artist: "",
-    url: "",
-    platform: null,
+    youtubeUrl: "",
+    spotifyUrl: "",
   });
 
   const [showPlaylistModal, setShowPlaylistModal] = useState(false);
@@ -64,12 +63,18 @@ export default function SongTable({ title, songs, onAdd, onEdit, onDelete }: Pro
   }, [youtubeToken, isLoggedInWithYouTube]);
 
   async function handleSubmit() {
+
+    if(url == ""){
+      return alert("url boş bırakılamaz.")
+    }
+
     const result = await getSongInfo(url);
-    const newForm = {
+    const newForm : Song = {
+      id:crypto.randomUUID(),
       title: result.title,
       artist: result.artist,
-      url,
-      platform: result.platform ? (result.platform as Platform) : null,
+      youtubeUrl:result.youtubeUrl,
+      spotifyUrl:result.spotifyUrl,
     };
 
     if (editingId) {
@@ -82,7 +87,7 @@ export default function SongTable({ title, songs, onAdd, onEdit, onDelete }: Pro
       setShowAddForm(false);
     }
 
-    setForm({ title: "", artist: "", url: "" , platform:null});
+    setForm({ title: "", artist: "", youtubeUrl: "" , spotifyUrl:""});
   }
 
   return (
@@ -95,6 +100,7 @@ export default function SongTable({ title, songs, onAdd, onEdit, onDelete }: Pro
           <tr className="text-left text-[var(--muted)] border-b border-gray-700 text-sm">
             <th className="p-2">Şarkı</th>
             <th className="p-2">Sanatçı</th>
+            <th className="p-2">Dinle</th>
             <th className="p-2">PlayListe Ekle</th>
             <th className="p-2">Düzenle</th>
             <th className="p-2">Sil</th>
@@ -105,35 +111,30 @@ export default function SongTable({ title, songs, onAdd, onEdit, onDelete }: Pro
             <tr key={song.id} className="border-b border-gray-800 text-sm">
               <td className="p-2 font-medium truncate max-w-[150px]">{song.title}</td>
               <td className="p-2 truncate max-w-[150px]">{song.artist}</td>
-              {/* <td className="p-2">
-              {song.url ? (
-                <a
-                  href={song.url}
-                  target="_blank"
+              <td className="p-2">
+              {song.spotifyUrl || song.youtubeUrl ? (
+                <span
                   rel="noreferrer"
                   className="relative flex items-center gap-2 group !px-3 !py-1 text-xl overflow-hidden"
                 >
-                  {song.platform === "Spotify" ? (
-                    <FontAwesomeIcon
-                      icon={faSpotify}
-                      className="text-[#1DB954] transition-transform duration-300 group-hover:-translate-x-2"
-                    />
-                  ) : (
-                    <FontAwesomeIcon
-                      icon={faYoutube}
-                      className="text-[#FF0000] transition-transform duration-300 group-hover:-translate-x-2"
-                    />
-                  )}
-
+                <a target="blank" href={song.spotifyUrl}>
                   <FontAwesomeIcon
-                    icon={faArrowRight}
-                    className="absolute right-12 opacity-0 translate-x-2 transition-all duration-300 group-hover:opacity-100 group-hover:translate-x-0 text-gray-400"
+                    icon={faSpotify}
+                    className="text-[#1DB954] transition-transform duration-300 hover:scale-125"
                   />
                 </a>
+                <a target="blank" href={song.youtubeUrl}>
+                  <FontAwesomeIcon
+                    href={song.youtubeUrl}
+                    icon={faYoutube}
+                    className="text-[#FF0000] transition-transform duration-700 hover:scale-125"
+                  />
+                </a>
+                </span>
               ) : (
                 <span className="badge text-xs">yok</span>
               )}
-              </td> */}
+              </td>
               <td className="p-2">
                 {isLoggedInWithSpotify && spotifyPlaylists.length > 0 || isLoggedInWithYouTube && youtubePlaylists.length > 0 ? (
                     <button
@@ -146,7 +147,7 @@ export default function SongTable({ title, songs, onAdd, onEdit, onDelete }: Pro
                       Ekle
                     </button>
                 ) : (
-                  <span className="text-gray-500 text-xs">Login to add</span>
+                  <span className="text-gray-500 text-xs">Eklemek için giriş yapın</span>
                 )}
               </td>
 
@@ -155,7 +156,7 @@ export default function SongTable({ title, songs, onAdd, onEdit, onDelete }: Pro
                   className="btn !bg-yellow-600 hover:!bg-yellow-500 !px-2 !py-1 text-xs"
                   onClick={() => {
                     setEditingId(song.id);
-                    setForm({ title: song.title, artist: song.artist, url: song.url, platform: song.platform });
+                    setForm({ title: song.title, artist: song.artist, youtubeUrl: song.youtubeUrl, spotifyUrl:song.spotifyUrl });
                     setShowUpdateForm(true);
                   }}
                 >
@@ -182,53 +183,77 @@ export default function SongTable({ title, songs, onAdd, onEdit, onDelete }: Pro
             key={song.id}
             className="p-3 border border-gray-700 rounded text-xs space-y-1 flex flex-col items-start justify-between"
           >
-            <div className="font-semibold">{song.title}</div>
-            <div className="text-[var(--muted)]">{song.artist}</div>
-            <div className="flex gap-2 mt-2 justify-end w-full items-center">
-            {song.url ? (
-              <a
-                href={song.url}
-                target="_blank"
-                rel="noreferrer"
-                className={`
-                  relative flex items-center justify-center group 
-                  text-2xl sm:text-xl p-2 sm:p-1 rounded-full
-                  transition-all duration-300
-                  hover:scale-110 active:scale-95
-                  ${song.platform === "Spotify" ? "text-[#1DB954]" : "text-[#FF0000]"}
-                `}
-              >
-                {/* Ana ikon */}
-                <FontAwesomeIcon
-                  icon={song.platform === "Spotify" ? faSpotify : faYoutube}
-                  className="transition-transform duration-300 group-hover:-translate-x-2"
-                />
+            {/* Song Title & Artist */}
+            <div className="font-semibold truncate max-w-[200px]">{song.title}</div>
+            <div className="text-[var(--muted)] truncate max-w-[200px]">{song.artist}</div>
 
-                {/* Ok ikonu (sadece masaüstüde görünsün) */}
-                <FontAwesomeIcon
-                  icon={faArrowRight}
+            {/* Actions */}
+            <div className="flex flex-wrap gap-2 mt-3 justify-end w-full items-center">
+              {/* Listen / Go to Song */}
+              {song.youtubeUrl || song.spotifyUrl ? (
+                <span
+                  rel="noreferrer"
                   className={`
-                    absolute right-10 opacity-0 translate-x-2 
-                    transition-all duration-300 
-                    group-hover:opacity-100 group-hover:translate-x-0
-                    hidden sm:block text-gray-400
+                    gap-2
+                    relative flex items-center justify-center group 
+                    text-2xl sm:text-xl p-2 sm:p-1 rounded-full
+                    transition-all duration-300
                   `}
-                />
-              </a>
-            ) : (
-              <span className="badge text-xs">yok</span>
-            )}
+                >
+                  <a target="blank" href={song.spotifyUrl}
+                  >
+                    <FontAwesomeIcon
+                      icon={faSpotify}
+                      className="transition-transform text-[#1DB954] duration-300 hover:scale-125"
+                    />
+                  </a>
+                  <a target="blank" href={song.youtubeUrl} >
+                    <FontAwesomeIcon
+                      icon={faYoutube}
+                      className="transition-transform text-[#FF0000] duration-300 hover:scale-125"
+                    />
+                  </a>
+                </span>
+              ) : (
+                <span className="badge text-xs">yok</span>
+              )}
 
+              {/* Add to Playlist */}
+              {((isLoggedInWithSpotify && spotifyPlaylists.length > 0) ||
+                (isLoggedInWithYouTube && youtubePlaylists.length > 0)) ? (
+                <button
+                  className="btn !bg-green-600 hover:!bg-green-500 !px-2 !py-1 text-xs"
+                  onClick={() => {
+                    setSongToAdd(song);
+                    setShowPlaylistModal(true);
+                  }}
+                >
+                  Ekle
+                </button>
+              ) : (
+                <span className="text-gray-500 text-xs whitespace-nowrap">
+                  Eklemek için giriş yapın
+                </span>
+              )}
+
+              {/* Edit Song */}
               <button
                 className="btn !bg-yellow-600 hover:!bg-yellow-500 !px-2 !py-1 text-xs"
                 onClick={() => {
                   setEditingId(song.id);
-                  setForm({ title: song.title, artist: song.artist, url: song.url, platform: song.platform });
+                  setForm({
+                    title: song.title,
+                    artist: song.artist,
+                    youtubeUrl: song.youtubeUrl,
+                    spotifyUrl: song.spotifyUrl,
+                  });
                   setShowUpdateForm(true);
                 }}
               >
                 Düzenle
               </button>
+
+              {/* Delete Song */}
               <button
                 className="btn !bg-red-600 hover:!bg-red-500 !px-2 !py-1 text-xs"
                 onClick={() => onDelete(song.id)}
@@ -278,9 +303,15 @@ export default function SongTable({ title, songs, onAdd, onEdit, onDelete }: Pro
           />
           <input
             className="input"
-            placeholder="URL"
-            value={form.url}
-            onChange={(e) => setForm({ ...form, url: e.target.value })}
+            placeholder="Youtube Url"
+            value={form.youtubeUrl}
+            onChange={(e) => setForm({ ...form, youtubeUrl: e.target.value })}
+          />
+          <input
+            className="input"
+            placeholder="Spotify Url"
+            value={form.spotifyUrl}
+            onChange={(e) => setForm({ ...form, spotifyUrl: e.target.value })}
           />
           <div className="flex gap-2 justify-end">
             <button className="btn" onClick={handleSubmit}>
@@ -291,6 +322,7 @@ export default function SongTable({ title, songs, onAdd, onEdit, onDelete }: Pro
               onClick={() => {
                 setShowUpdateForm(false);
                 setEditingId(null);
+                setForm({ title: "", artist: "", youtubeUrl: "" , spotifyUrl:""});
               }}
             >
               Vazgeç
@@ -315,8 +347,7 @@ export default function SongTable({ title, songs, onAdd, onEdit, onDelete }: Pro
               className="btn !bg-gray-600 hover:!bg-gray-500"
               onClick={() => {
                 setShowAddForm(false);
-                setEditingId(null);
-                setForm({ title: "", artist: "", url: "" , platform: null});
+                url !== "" && setUrl("");
               }}
             >
               Vazgeç
@@ -390,7 +421,7 @@ export default function SongTable({ title, songs, onAdd, onEdit, onDelete }: Pro
                 setSelectedPlaylistInModal(null);
               }}
             >
-              Add
+              Ekle
             </button>
           }
           {
@@ -404,7 +435,7 @@ export default function SongTable({ title, songs, onAdd, onEdit, onDelete }: Pro
                 setSelectedPlaylistInModal(null);
               }}
             >
-              Add
+              Ekle
             </button>
           }
             <button
@@ -415,7 +446,7 @@ export default function SongTable({ title, songs, onAdd, onEdit, onDelete }: Pro
                 setSelectedPlaylistInModal(null);
               }}
             >
-              Cancel
+              İptal
             </button>
           </div>
         </div>

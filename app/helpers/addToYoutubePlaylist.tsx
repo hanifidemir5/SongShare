@@ -14,7 +14,7 @@ export async function addToYouTubePlaylist(token: string | null, song: Song, pla
   // Handles URLs like:
   // https://www.youtube.com/watch?v=VIDEOID
   // https://youtu.be/VIDEOID
-  const match = song.url.match(/(?:v=|\/)([a-zA-Z0-9_-]{11})/);
+  const match = song.youtubeUrl.match(/(?:v=|\/)([a-zA-Z0-9_-]{11})/);
   const videoId = match ? match[1] : null;
   if (!videoId) return alert("Invalid YouTube URL");
 

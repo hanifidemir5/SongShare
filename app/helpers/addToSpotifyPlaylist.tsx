@@ -7,7 +7,7 @@ export async function addToSpotifyPlaylist(token:string|null, song: Song, playli
     if (!token) return alert("You must be logged in");
 
     // Extract Spotify track ID from URL
-    const match = song.url.match(/track\/([a-zA-Z0-9]+)/);
+    const match = song.spotifyUrl.match(/track\/([a-zA-Z0-9]+)/);
     const trackId = match ? match[1] : null;
     if (!trackId) return alert("Invalid Spotify URL");
 

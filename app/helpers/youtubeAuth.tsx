@@ -1,5 +1,5 @@
 const CLIENT_ID = process.env.NEXT_PUBLIC_YOUTUBE_CLIENT_ID!;
-const REDIRECT_URI = "http://localhost:3000";
+const REDIRECT_URI = "https://songshareforlove.netlify.app";
 const AUTH_ENDPOINT = "https://accounts.google.com/o/oauth2/v2/auth";
 const RESPONSE_TYPE = "token";
 

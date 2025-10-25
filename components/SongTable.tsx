@@ -401,7 +401,7 @@ export default function SongTable({ title, songs, onAdd, onEdit, onDelete }: Pro
             >
               <option value="">Select a playlist</option>
               {spotifyPlaylists.map((pl) => (
-                <option key={pl.uuid} value={pl.uuid}>{pl.name}</option>
+                <option key={pl.id} value={pl.id}>{pl.name}</option>
               ))}
             </select>
           }
@@ -414,7 +414,7 @@ export default function SongTable({ title, songs, onAdd, onEdit, onDelete }: Pro
             >
               <option value="">Select a playlist</option>
               {youtubePlaylists.map((pl) => (
-                <option key={pl.uuid} value={pl.uuid}>{pl.title}</option>
+                <option key={pl.id} value={pl.id}>{pl.title}</option>
               ))}
             </select>
           }
@@ -453,6 +453,7 @@ export default function SongTable({ title, songs, onAdd, onEdit, onDelete }: Pro
                 setShowPlaylistModal(false);
                 setSongToAdd(null);
                 setSelectedPlaylistInModal(null);
+                setSelectedPlatformInModal(null)
               }}
             >
               İptal

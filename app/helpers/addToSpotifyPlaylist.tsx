@@ -1,4 +1,3 @@
-import { useSpotifyAuth } from "../contexts/SpotifyAuthContext";
 import { Song } from "../types";
 
 export async function addToSpotifyPlaylist(token:string|null, song: Song, playlistId: string | null) {
@@ -25,8 +24,9 @@ export async function addToSpotifyPlaylist(token:string|null, song: Song, playli
     if (response.ok) {
         alert(`Added "${song.title}" to playlist!`);
     } else {
-        const error = await response.json();
-        console.error(error);
+        const errorText = await response.text();
+        console.error("Spotify API error:", errorText);
         alert("Failed to add song to playlist");
     }
+
 }

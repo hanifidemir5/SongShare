@@ -6,7 +6,7 @@ export enum Platform {
 }
 // types.ts
 export type Song = {
-  id: string;
+  uuid: string ;
   title: string;
   artist: string;
   youtubeUrl: string | undefined;

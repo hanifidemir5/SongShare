@@ -14,16 +14,16 @@ import { addToYouTubePlaylist } from "@/app/helpers/addToYoutubePlaylist";
 type Props = {
   title: string;
   songs: Song[];
-  onAdd: (song: Omit<Song, "id">) => void;
-  onEdit: (id: string, song: Omit<Song, "id">) => void;
-  onDelete: (id: string) => void;
+  onAdd: (song: Omit<Song, "uuid">) => void;
+  onEdit: (uuid: string, song: Omit<Song, "uuid">) => void;
+  onDelete: (uuid: string) => void;
 };
 
 export default function SongTable({ title, songs, onAdd, onEdit, onDelete }: Props) {
   const [showAddForm, setShowAddForm] = useState(false);
   const [showUpdateForm, setShowUpdateForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState<Omit<Song, "id">>({
+  const [form, setForm] = useState<Omit<Song, "uuid">>({
     title: "",
     artist: "",
     youtubeUrl: "",
@@ -62,32 +62,41 @@ export default function SongTable({ title, songs, onAdd, onEdit, onDelete }: Pro
     }
   }, [youtubeToken, isLoggedInWithYouTube]);
 
-  async function handleSubmit() {
-
-    if(url == ""){
-      return alert("url boş bırakılamaz.")
+  async function handleAddSong() {
+    if (url === "") {
+      return alert("URL boş bırakılamaz.");
     }
 
     const result = await getSongInfo(url);
-    const newForm : Song = {
-      id:crypto.randomUUID(),
+    const newSong: Song = {
+      uuid: crypto.randomUUID(),
       title: result.title,
       artist: result.artist,
-      youtubeUrl:result.youtubeUrl,
-      spotifyUrl:result.spotifyUrl,
+      youtubeUrl: result.youtubeUrl,
+      spotifyUrl: result.spotifyUrl,
     };
 
-    if (editingId) {
-      onEdit(editingId, form);  
-      setEditingId(null);
-      setShowUpdateForm(false);
-    } else {
-      onAdd(newForm);
-      setUrl("");
-      setShowAddForm(false);
-    }
+    onAdd(newSong);
+    setUrl("");
+    setShowAddForm(false);
+    setForm({ title: "", artist: "", youtubeUrl: "", spotifyUrl: "" });
+  }
 
-    setForm({ title: "", artist: "", youtubeUrl: "" , spotifyUrl:""});
+  async function handleUpdateSong() {
+    if (!editingId) return;
+
+    onEdit(editingId, form);  
+    setEditingId(null);
+    setShowUpdateForm(false);
+    setForm({ title: "", artist: "", youtubeUrl: "", spotifyUrl: "" });
+  }
+
+  async function handleSubmit() {
+    if (editingId) {
+      await handleUpdateSong();
+    } else {
+      await handleAddSong();
+    }
   }
 
   return (
@@ -108,7 +117,7 @@ export default function SongTable({ title, songs, onAdd, onEdit, onDelete }: Pro
         </thead>
         <tbody>
           {currentSongs.map((song) => (
-            <tr key={song.id} className="border-b border-gray-800 text-sm">
+            <tr key={song.uuid} className="border-b border-gray-800 text-sm">
               <td className="p-2 font-medium truncate max-w-[150px]">{song.title}</td>
               <td className="p-2 truncate max-w-[150px]">{song.artist}</td>
               <td className="p-2">
@@ -155,7 +164,7 @@ export default function SongTable({ title, songs, onAdd, onEdit, onDelete }: Pro
                 <button
                   className="btn !bg-yellow-600 hover:!bg-yellow-500 !px-2 !py-1 text-xs"
                   onClick={() => {
-                    setEditingId(song.id);
+                    setEditingId(song.uuid);
                     setForm({ title: song.title, artist: song.artist, youtubeUrl: song.youtubeUrl, spotifyUrl:song.spotifyUrl });
                     setShowUpdateForm(true);
                   }}
@@ -166,7 +175,7 @@ export default function SongTable({ title, songs, onAdd, onEdit, onDelete }: Pro
               <td>
                 <button
                   className="btn !bg-red-600 hover:!bg-red-500 !px-2 !py-1 text-xs"
-                  onClick={() => onDelete(song.id)}
+                  onClick={() => onDelete(song.uuid)}
                 >
                   Sil
                 </button>
@@ -180,7 +189,7 @@ export default function SongTable({ title, songs, onAdd, onEdit, onDelete }: Pro
       <div className="md:hidden space-y-3 min-h-28">
         {currentSongs.map((song) => (
           <div
-            key={song.id}
+            key={song.uuid}
             className="p-3 border border-gray-700 rounded text-xs space-y-1 flex flex-col items-start justify-between"
           >
             {/* Song Title & Artist */}
@@ -240,7 +249,7 @@ export default function SongTable({ title, songs, onAdd, onEdit, onDelete }: Pro
               <button
                 className="btn !bg-yellow-600 hover:!bg-yellow-500 !px-2 !py-1 text-xs"
                 onClick={() => {
-                  setEditingId(song.id);
+                  setEditingId(song.uuid);
                   setForm({
                     title: song.title,
                     artist: song.artist,
@@ -256,7 +265,7 @@ export default function SongTable({ title, songs, onAdd, onEdit, onDelete }: Pro
               {/* Delete Song */}
               <button
                 className="btn !bg-red-600 hover:!bg-red-500 !px-2 !py-1 text-xs"
-                onClick={() => onDelete(song.id)}
+                onClick={() => onDelete(song.uuid)}
               >
                 Sil
               </button>
@@ -392,7 +401,7 @@ export default function SongTable({ title, songs, onAdd, onEdit, onDelete }: Pro
             >
               <option value="">Select a playlist</option>
               {spotifyPlaylists.map((pl) => (
-                <option key={pl.id} value={pl.id}>{pl.name}</option>
+                <option key={pl.uuid} value={pl.uuid}>{pl.name}</option>
               ))}
             </select>
           }
@@ -405,7 +414,7 @@ export default function SongTable({ title, songs, onAdd, onEdit, onDelete }: Pro
             >
               <option value="">Select a playlist</option>
               {youtubePlaylists.map((pl) => (
-                <option key={pl.id} value={pl.id}>{pl.title}</option>
+                <option key={pl.uuid} value={pl.uuid}>{pl.title}</option>
               ))}
             </select>
           }

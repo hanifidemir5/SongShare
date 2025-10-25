@@ -43,12 +43,12 @@ export default function HomePage() {
   async function addSong(
     person: Person,
     category: "recommended" | "favorite",
-    song: Omit<Song, "id">
+    song: Omit<Song, "uuid">
   ) {
     const table = `${person}'s_${category}_songs`; // tablo adını dinamik oluştur
     const { data, error } = await supabase
       .from(table)
-      .insert([{ id: crypto.randomUUID(), ...song }])
+      .insert([{ ...song }])
       .select();
 
     if (error) {
@@ -75,15 +75,15 @@ export default function HomePage() {
   async function editSong(
     person: Person,
     category: "recommended" | "favorite",
-    id: string,
-    song: Omit<Song, "id">
+    uuid: string,
+    song: Omit<Song, "uuid">
   ) {
     const table = `${person}'s_${category}_songs`; // tablo adını oluştur
 
     const { data, error } = await supabase
       .from(table)
       .update(song)
-      .eq("id", id)
+      .eq("uuid", uuid)
       .select();
 
     if (error) {
@@ -100,7 +100,7 @@ export default function HomePage() {
           ...prev[person],
           [category === "recommended" ? "recommended" : "favorites"]: prev[person][
             category === "recommended" ? "recommended" : "favorites"
-          ].map((s) => (s.id === id ? updated : s)),
+          ].map((s) => (s.uuid === uuid ? updated : s)),
         },
       }));
     }
@@ -109,11 +109,11 @@ export default function HomePage() {
   async function deleteSong(
     person: Person,
     category: "recommended" | "favorite",
-    id: string
+    uuid: string
   ) {
     const table = `${person}'s_${category}_songs`; // tablo adını oluştur
 
-    const { error } = await supabase.from(table).delete().eq("id", id);
+    const { error } = await supabase.from(table).delete().eq("uuid", uuid);
 
     if (error) {
       console.error(error);
@@ -126,7 +126,7 @@ export default function HomePage() {
         ...prev[person],
         [category === "recommended" ? "recommended" : "favorites"]: prev[person][
           category === "recommended" ? "recommended" : "favorites"
-        ].filter((s) => s.id !== id),
+        ].filter((s) => s.uuid !== uuid),
       },
     }));
   }
@@ -139,16 +139,16 @@ export default function HomePage() {
         title="🎧 Şu Sıralar Dinlediklerim"
         songs={songs[person].recommended}   // ✅ aktif kişinin recommended listesi
         onAdd={(song) => addSong(person,"recommended", song)}
-        onEdit={(id, song) => editSong(person, "recommended", id, song)}
-        onDelete={(id) => deleteSong(person,"recommended", id)}
+        onEdit={(uuid, song) => editSong(person, "recommended", uuid, song)}
+        onDelete={(uuid) => deleteSong(person,"recommended", uuid)}
       />
 
       <SongTable
         title="⭐ Tüm Zamanlar En Sevdiklerim"
         songs={songs[person].favorites}
         onAdd={(song) => addSong(person,"favorite", song)}
-        onEdit={(id, song) => editSong(person,"favorite", id, song)}
-        onDelete={(id) => deleteSong(person,"favorite", id)}
+        onEdit={(uuid, song) => editSong(person,"favorite", uuid, song)}
+        onDelete={(uuid) => deleteSong(person,"favorite", uuid)}
       />
     </main>
   );

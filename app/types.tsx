@@ -1,20 +1,14 @@
-import { useState } from "react";
-
-export enum Platform {
-  YouTube = "YouTube",
-  Spotify = "Spotify",
-}
-// types.ts
 export type Song = {
-  uuid: string ;
+  id: string | null;
   title: string;
   artist: string;
   youtubeUrl: string | undefined;
   spotifyUrl: string | undefined;
+  addedBy: string | null | undefined;
+  category: string;
 };
 
-export type Person = "Fatma" | "Hanifi";
-export type SongState = {
-  recommended: Song[];
-  favorites: Song[];
+export type User = {
+  id: string;
+  name: string;
 };

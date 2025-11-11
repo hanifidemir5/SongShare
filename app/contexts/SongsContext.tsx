@@ -65,8 +65,20 @@ export const SongsProvider = ({ children }: Props) => {
     enabled: !!currentUser, // only fetch if currentUser exists
   });
 
-  const recommendedSongs = songs.filter((s) => s.category === "recommended");
-  const favoriteSongs = songs.filter((s) => s.category === "favorites");
+  const recommendedSongs = songs
+    .filter((s) => s.category === "recommended")
+    .sort(
+      (a, b) =>
+        new Date(b.created_at ?? 0).getTime() -
+        new Date(a.created_at ?? 0).getTime()
+    );
+  const favoriteSongs = songs
+    .filter((s) => s.category === "favorites")
+    .sort(
+      (a, b) =>
+        new Date(b.created_at ?? 0).getTime() -
+        new Date(a.created_at ?? 0).getTime()
+    );
 
   return (
     <SongsContext.Provider

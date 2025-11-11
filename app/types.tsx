@@ -6,6 +6,7 @@ export type Song = {
   spotifyUrl: string | undefined;
   addedBy: string | null | undefined;
   category: string;
+  readonly created_at?: string;
 };
 
 export type User = {

@@ -1,11 +1,12 @@
 const CLIENT_ID = process.env.NEXT_PUBLIC_YOUTUBE_CLIENT_ID!;
-const REDIRECT_URI = "https://songshareforlove.netlify.app";
+// const REDIRECT_URI = "https://songshareforlove.netlify.app";
+const REDIRECT_URI = "http://localhost:3000";
 const AUTH_ENDPOINT = "https://accounts.google.com/o/oauth2/v2/auth";
 const RESPONSE_TYPE = "token";
 
 const SCOPES = [
   "https://www.googleapis.com/auth/youtube.readonly",
-  "https://www.googleapis.com/auth/youtube.force-ssl"
+  "https://www.googleapis.com/auth/youtube.force-ssl",
 ];
 
 export function loginWithYouTube() {

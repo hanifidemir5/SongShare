@@ -50,10 +50,10 @@ export default function Header({
         logoutSpotify={logoutWithSpotify}
         logoutYoutube={logoutWithYouTube}
       />
-      <div className="relative inline-block text-left">
+      <div className="relative inline-block text-left ">
         <button
           onClick={() => setIsOpen((prev) => !prev)}
-          className="btn hover:!bg-none !px-4 !py-3 text-sm flex items-center gap-2"
+          className="btn hover:!bg-none !px-4  text-sm flex items-center gap-2 "
         >
           <span>{currentUser ? currentUser.name : "Select User"}</span>
           <span className="hover:bg-[rgb(79_70_229/1)] transition-colors duration-300 delay-150 px-2 py-1 rounded">
@@ -66,12 +66,12 @@ export default function Header({
         </button>
 
         {isOpen && (
-          <ul className="absolute flex flex-col left-0 mt-1 w-full border border-[rgb(131,127,204)] gap-1 shadow-md z-10">
+          <ul className="absolute right-0 mt-1 w-28 origin-top-right rounded-md p-2 bg-white shadow-lg ring-1 ring-black/10 divide-y divide-gray-100 z-50">
             {otherUsers.map((user) => (
               <li key={user.id}>
                 <button
                   onClick={() => handleSelect(user)}
-                  className={`btn block !rounded-none !w-full text-left px-3 py-2 text-sm  ${
+                  className={`hover:bg-gray-100 text-left px-3  rounded-md text-black w-full  ${
                     user.id === currentUser?.id ? "font-medium" : ""
                   }`}
                 >

@@ -32,7 +32,7 @@ export const SongsProvider = ({ children }: Props) => {
   // Fetch all users once on mount
   React.useEffect(() => {
     const fetchUsers = async () => {
-      const { data, error } = await supabase.from("User").select("*");
+      const { data, error } = await supabase.from("profiles").select("*");
       if (error) {
         console.error("Error fetching users:", error);
         return;

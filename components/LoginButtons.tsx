@@ -9,11 +9,15 @@ export default function LoginButtons({
   isYoutubeLoggedIn,
   logoutSpotify,
   logoutYoutube,
+  onOpenLogin,
+  onOpenRegister,
 }: {
   isSpotifyLoggedIn: boolean;
   isYoutubeLoggedIn: boolean;
   logoutSpotify: () => void;
   logoutYoutube: () => void;
+  onOpenLogin: () => void;
+  onOpenRegister: () => void;
 }) {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -37,13 +41,13 @@ export default function LoginButtons({
             {/* Regular login/register (you can later link these to modals or routes) */}
             <button
               className="hover:bg-gray-100 text-left px-3 py-2 rounded-md"
-              onClick={() => alert("Regular login clicked")}
+              onClick={onOpenLogin}
             >
               Login
             </button>
             <button
               className="hover:bg-gray-100 text-left px-3 py-2 rounded-md"
-              onClick={() => alert("Regular register clicked")}
+              onClick={onOpenRegister}
             >
               Register
             </button>

@@ -5,6 +5,8 @@ import { User } from "@/app/types";
 import { useState } from "react";
 import { faArrowUp, faArrowDown } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import LoginModal from "./LoginModal";
+import RegisterModal from "./RegisterModal";
 type Props = {
   onSearch: (q: string) => void;
   userList: User[];
@@ -21,6 +23,8 @@ export default function Header({
   const { isLoggedInWithSpotify, logoutWithSpotify } = useSpotifyAuth();
   const { isLoggedInWithYouTube, logoutWithYouTube } = useYouTubeAuth();
   const [isOpen, setIsOpen] = useState(false);
+  const [isLoginOpen, setIsLoginOpen] = useState(false);
+  const [isRegisterOpen, setIsRegisterOpen] = useState(false);
 
   const handleSelect = (user: User) => {
     setCurrentUser(user);
@@ -49,6 +53,13 @@ export default function Header({
         isYoutubeLoggedIn={isLoggedInWithYouTube}
         logoutSpotify={logoutWithSpotify}
         logoutYoutube={logoutWithYouTube}
+        onOpenLogin={() => setIsLoginOpen(true)}
+        onOpenRegister={() => setIsRegisterOpen(true)}
+      />
+      <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} />
+      <RegisterModal
+        isOpen={isRegisterOpen}
+        onClose={() => setIsRegisterOpen(false)}
       />
       <div className="relative inline-block text-left ">
         <button

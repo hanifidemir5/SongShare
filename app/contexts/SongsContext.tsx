@@ -2,15 +2,15 @@
 import React, { createContext, useContext, ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabaseClient";
-import { Song, User } from "../types";
+import { Song, Profile } from "../types";
 
 interface SongsContextValue {
   recommendedSongs: Song[];
   favoriteSongs: Song[];
   isLoading: boolean;
-  currentUser: User | null;
-  setCurrentUser: (user: User) => void;
-  userList: User[];
+  currentProfile: Profile | null;
+  setCurrentProfile: (profile: Profile) => void;
+  profileList: Profile[];
   refetchSongs: () => void;
 }
 
@@ -26,43 +26,69 @@ interface Props {
 }
 
 export const SongsProvider = ({ children }: Props) => {
-  const [userList, setUserList] = React.useState<User[]>([]);
-  const [currentUser, setCurrentUser] = React.useState<User | null>(null);
+  const [profileList, setProfileList] = React.useState<Profile[]>([]);
+  const [currentProfile, setCurrentProfile] = React.useState<Profile | null>(
+    null
+  );
 
   // Fetch all users once on mount
+  const fetchProfiles = async () => {
+    const { data, error } = await supabase.from("profiles").select("*");
+    if (error) {
+      console.error("Error fetching users:", error);
+      return;
+    }
+    setProfileList(data ?? []);
+    // set first user as current by default
+    if (data && data.length > 0) setCurrentProfile(data[0]);
+  };
+
   React.useEffect(() => {
-    const fetchUsers = async () => {
-      const { data, error } = await supabase.from("profiles").select("*");
-      if (error) {
-        console.error("Error fetching users:", error);
-        return;
-      }
-      setUserList(data ?? []);
-      // set first user as current by default
-      if (data && data.length > 0) setCurrentUser(data[0]);
-    };
-    fetchUsers();
+    fetchProfiles();
   }, []);
 
   // Fetch songs for currentUser using React Query
   const fetchSongs = async (): Promise<Song[]> => {
-    if (!currentUser) return [];
+    if (!currentProfile) return [];
     const { data, error } = await supabase
       .from("Song")
       .select("*")
-      .eq("addedBy", currentUser.id);
+      .eq("addedBy", currentProfile.id);
     if (error) throw error;
     return data ?? [];
   };
+
+  // Add this inside SongsProvider, under fetchProfiles effect
+  React.useEffect(() => {
+    const { data: listener } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (session?.user) {
+          // user logged in → find matching profile
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("*")
+            .eq("id", session.user.id)
+            .single();
+
+          if (profile) setCurrentProfile(profile);
+        } else {
+          // user logged out → clear profile
+          fetchProfiles();
+        }
+      }
+    );
+
+    return () => listener.subscription.unsubscribe();
+  }, []);
 
   const {
     data: songs = [],
     isLoading,
     refetch: refetchSongs,
   } = useQuery({
-    queryKey: ["songs", currentUser?.id],
+    queryKey: ["songs", currentProfile?.id],
     queryFn: fetchSongs,
-    enabled: !!currentUser, // only fetch if currentUser exists
+    enabled: !!currentProfile, // only fetch if currentUser exists
   });
 
   const recommendedSongs = songs
@@ -86,9 +112,9 @@ export const SongsProvider = ({ children }: Props) => {
         recommendedSongs,
         favoriteSongs,
         isLoading,
-        currentUser,
-        setCurrentUser,
-        userList,
+        currentProfile,
+        setCurrentProfile,
+        profileList,
         refetchSongs,
       }}
     >

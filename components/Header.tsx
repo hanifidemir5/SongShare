@@ -1,24 +1,25 @@
 import { useSpotifyAuth } from "@/app/contexts/SpotifyAuthContext";
 import LoginButtons from "./LoginButtons";
 import { useYouTubeAuth } from "@/app/contexts/YoutubeAuthContext";
-import { User } from "@/app/types";
+import { Profile } from "@/app/types";
 import { useState } from "react";
 import { faArrowUp, faArrowDown } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import LoginModal from "./LoginModal";
 import RegisterModal from "./RegisterModal";
+
 type Props = {
   onSearch: (q: string) => void;
-  userList: User[];
-  currentUser: User | null | undefined;
-  setCurrentUser: (user: User) => void;
+  profileList: Profile[];
+  currentProfile: Profile | null | undefined;
+  setCurrentProfile: (profile: Profile) => void;
 };
 
 export default function Header({
   onSearch,
-  currentUser,
-  userList,
-  setCurrentUser,
+  currentProfile,
+  profileList,
+  setCurrentProfile,
 }: Props) {
   const { isLoggedInWithSpotify, logoutWithSpotify } = useSpotifyAuth();
   const { isLoggedInWithYouTube, logoutWithYouTube } = useYouTubeAuth();
@@ -26,12 +27,14 @@ export default function Header({
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [isRegisterOpen, setIsRegisterOpen] = useState(false);
 
-  const handleSelect = (user: User) => {
-    setCurrentUser(user);
+  const handleSelect = (profile: Profile) => {
+    setCurrentProfile(profile);
     setIsOpen(false);
   };
 
-  const otherUsers = userList.filter((user) => user.id !== currentUser?.id);
+  const otherProfiles = profileList.filter(
+    (profile) => profile.id !== currentProfile?.id
+  );
 
   return (
     <header className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -66,7 +69,7 @@ export default function Header({
           onClick={() => setIsOpen((prev) => !prev)}
           className="btn hover:!bg-none !px-4  text-sm flex items-center gap-2 "
         >
-          <span>{currentUser ? currentUser.name : "Select User"}</span>
+          <span>{currentProfile ? currentProfile.name : "Select User"}</span>
           <span className="hover:bg-[rgb(79_70_229/1)] transition-colors duration-300 delay-150 px-2 py-1 rounded">
             {isOpen ? (
               <FontAwesomeIcon icon={faArrowUp} className="w-4 h-4" />
@@ -78,15 +81,15 @@ export default function Header({
 
         {isOpen && (
           <ul className="absolute right-0 mt-1 w-28 origin-top-right rounded-md p-2 bg-white shadow-lg ring-1 ring-black/10 divide-y divide-gray-100 z-50">
-            {otherUsers.map((user) => (
-              <li key={user.id}>
+            {otherProfiles.map((Profile) => (
+              <li key={Profile.id}>
                 <button
-                  onClick={() => handleSelect(user)}
+                  onClick={() => handleSelect(Profile)}
                   className={`hover:bg-gray-100 text-left px-3  rounded-md text-black w-full  ${
-                    user.id === currentUser?.id ? "font-medium" : ""
+                    Profile.id === currentProfile?.id ? "font-medium" : ""
                   }`}
                 >
-                  {user.name}
+                  {Profile.name}
                 </button>
               </li>
             ))}

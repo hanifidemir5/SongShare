@@ -102,15 +102,17 @@ export default function SongTable({ title, songs }: Props) {
                   key={song.title}
                   className="border-b border-gray-800 text-sm"
                 >
-                  <td className="p-2 font-medium truncate max-w-[150px]">
+                  <td className="p-2 font-medium truncate min-w-[130px] max-w-[130px]">
                     {song.title}
                   </td>
-                  <td className="p-2 truncate max-w-[150px]">{song.artist}</td>
+                  <td className="p-2 truncate min-w-[80px] max-w-[80px]">
+                    {song.artist}
+                  </td>
                   <td className="p-2">
                     {song.spotifyUrl || song.youtubeUrl ? (
                       <span
                         rel="noreferrer"
-                        className="relative flex items-center gap-2 group !px-3 !py-1 text-xl overflow-hidden"
+                        className="relative flex items-center gap-2 group  !py-1 text-xl overflow-hidden"
                       >
                         <a target="blank" href={song.spotifyUrl}>
                           <FontAwesomeIcon
@@ -130,7 +132,7 @@ export default function SongTable({ title, songs }: Props) {
                       <span className="badge text-xs">yok</span>
                     )}
                   </td>
-                  <td className="p-2">
+                  <td className="p-2 max-w-8">
                     {(isLoggedInWithSpotify && spotifyPlaylists.length > 0) ||
                     (isLoggedInWithYouTube && youtubePlaylists.length > 0) ? (
                       <button

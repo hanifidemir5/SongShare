@@ -9,8 +9,9 @@ export type Song = {
   readonly created_at?: string;
 };
 
-export type User = {
-  id: string;
-  name: string;
-  source: "spotify" | "youtube" | "manual";
+export type Profile = {
+  id: string | null;
+  name: string | null;
+  email?: string | null;
+  source: string | null;
 };

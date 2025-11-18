@@ -22,11 +22,24 @@ export default function RegisterModal({
       return;
     }
 
+    const { data: existingUser, error: findError } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("email", email)
+      .maybeSingle();
+
+    if (existingUser) {
+      alert("Email kullanılıyor.");
+      return;
+    }
+
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        data: { name },
+        data: {
+          display_name: { name },
+        },
       },
     });
 
@@ -35,8 +48,29 @@ export default function RegisterModal({
       return;
     }
 
-    console.log("Registered:", data);
-    onClose(); // optional: close modal after registering
+    const user = data.user;
+    if (!user) {
+      alert("Something went wrong, no user returned.");
+      return;
+    }
+
+    // Create profile row
+    const { error: profileError } = await supabase.from("profiles").insert({
+      id: user.id, // uuid from auth.users
+      email: email,
+      name: name,
+    });
+
+    if (profileError) {
+      console.error("Profile creation error:", profileError);
+      alert("Registered, but failed to create profile.");
+      return;
+    }
+
+    setName("");
+    setEmail("");
+    setPassword("");
+    onClose();
   }
 
   return (

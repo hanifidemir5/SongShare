@@ -12,7 +12,7 @@ export async function registerUser(
       password,
       options: {
         data: {
-          name: name, // custom user field stored in auth.user.user_metadata
+          name: name,
         },
       },
     });
@@ -24,6 +24,7 @@ export async function registerUser(
       user: data.user,
     };
   } catch (err: any) {
+    console.log(email, name, password);
     console.error("Register error:", err.message);
     return {
       success: false,

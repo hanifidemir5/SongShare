@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import Modal from "../app/ui/Modal";
+import { useSongs } from "@/app/contexts/SongsContext";
 
 export default function LoginModal({
   isOpen,
@@ -14,7 +15,6 @@ export default function LoginModal({
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-
   async function handleLogin() {
     try {
       setLoading(true);
@@ -29,9 +29,10 @@ export default function LoginModal({
         return;
       }
 
-      console.log("Logged in:", data.user);
-
-      onClose(); // Close modal after success
+      // Close modal after success; AuthContext updates automatically
+      setEmail("");
+      setPassword("");
+      onClose();
     } catch (err: any) {
       alert(err.message);
     } finally {

@@ -6,14 +6,17 @@ import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { SongsProvider } from "./contexts/SongsContext";
 import { SpotifyAuthProvider } from "./contexts/SpotifyAuthContext";
 import { YouTubeAuthProvider } from "./contexts/YoutubeAuthContext";
+import { AuthProvider } from "./contexts/AuthContext";
 
 export default function ClientProviders({ children }: { children: ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       <SongsProvider>
-        <YouTubeAuthProvider>
-          <SpotifyAuthProvider>{children}</SpotifyAuthProvider>
-        </YouTubeAuthProvider>
+        <AuthProvider>
+          <YouTubeAuthProvider>
+            <SpotifyAuthProvider>{children}</SpotifyAuthProvider>
+          </YouTubeAuthProvider>
+        </AuthProvider>
       </SongsProvider>
       <ReactQueryDevtools initialIsOpen={false} />
     </QueryClientProvider>

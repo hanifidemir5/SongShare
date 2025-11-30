@@ -1,12 +1,10 @@
-import { useSpotifyAuth } from "@/app/contexts/SpotifyAuthContext";
-import LoginButtons from "./LoginButtons";
-import { useYouTubeAuth } from "@/app/contexts/YoutubeAuthContext";
+import LoginButtons from "./auth/LoginButtons";
 import { Profile } from "@/app/types";
 import { useState } from "react";
 import { faArrowUp, faArrowDown } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import LoginModal from "./LoginModal";
-import RegisterModal from "./RegisterModal";
+import LoginModal from "./auth/Modals/LoginModal";
+import RegisterModal from "./auth/Modals/RegisterModal";
 
 type Props = {
   onSearch: (q: string) => void;
@@ -21,8 +19,6 @@ export default function Header({
   profileList,
   setCurrentProfile,
 }: Props) {
-  const { isLoggedInWithSpotify, logoutWithSpotify } = useSpotifyAuth();
-  const { isLoggedInWithYouTube, logoutWithYouTube } = useYouTubeAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [isRegisterOpen, setIsRegisterOpen] = useState(false);
@@ -52,10 +48,6 @@ export default function Header({
         onChange={(e) => onSearch(e.target.value)}
       />
       <LoginButtons
-        isSpotifyLoggedIn={isLoggedInWithSpotify}
-        isYoutubeLoggedIn={isLoggedInWithYouTube}
-        logoutSpotify={logoutWithSpotify}
-        logoutYoutube={logoutWithYouTube}
         onOpenLogin={() => setIsLoginOpen(true)}
         onOpenRegister={() => setIsRegisterOpen(true)}
       />
@@ -80,12 +72,12 @@ export default function Header({
         </button>
 
         {isOpen && (
-          <ul className="absolute right-0 mt-1 w-28 origin-top-right rounded-md p-2 bg-white shadow-lg ring-1 ring-black/10 divide-y divide-gray-100 z-50">
+          <ul className="absolute right-0 mt-1 origin-top-right rounded-md shadow-lg bg-[rgb(79_70_229/1)] w-full ring-1 bg-white ring-black/10 divide-y divide-gray-100 z-50">
             {otherProfiles.map((Profile) => (
               <li key={Profile.id}>
                 <button
                   onClick={() => handleSelect(Profile)}
-                  className={`hover:bg-gray-100 text-left px-3  rounded-md text-black w-full  ${
+                  className={`hover:bg-[rgb(99_102_241/1)] text-left px-3 py-2 text-white bg-[rgb(79_70_229/1)] rounded-md w-full  ${
                     Profile.id === currentProfile?.id ? "font-medium" : ""
                   }`}
                 >

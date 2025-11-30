@@ -1,3 +1,5 @@
+import { error } from "console";
+
 // youtubeApi.ts
 export interface YouTubePlaylist {
   id: string;
@@ -7,7 +9,9 @@ export interface YouTubePlaylist {
 /**
  * Fetch all playlists of the authenticated user
  */
-export async function getUserPlaylists(token: string): Promise<YouTubePlaylist[]> {
+export async function getUserPlaylists(
+  token: string | null
+): Promise<YouTubePlaylist[]> {
   if (!token) throw new Error("No YouTube access token provided");
 
   const res = await fetch(
@@ -18,8 +22,8 @@ export async function getUserPlaylists(token: string): Promise<YouTubePlaylist[]
   );
 
   if (!res.ok) {
-    const errText = await res.text();
-    throw new Error(`Failed to fetch YouTube playlists: ${errText}`);
+    const errorBody = await res.json();
+    throw errorBody;
   }
 
   const data = await res.json();

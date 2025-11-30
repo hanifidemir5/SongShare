@@ -2,8 +2,7 @@
 
 import { useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import Modal from "../app/ui/Modal";
-import { useSongs } from "@/app/contexts/SongsContext";
+import Modal from "../../../app/ui/Modal";
 
 export default function LoginModal({
   isOpen,
@@ -29,7 +28,6 @@ export default function LoginModal({
         return;
       }
 
-      // Close modal after success; AuthContext updates automatically
       setEmail("");
       setPassword("");
       onClose();
@@ -42,7 +40,13 @@ export default function LoginModal({
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Login">
-      <div className="flex flex-col gap-3">
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          handleLogin();
+        }}
+        className="flex flex-col gap-3"
+      >
         <input
           className="input"
           placeholder="Email"
@@ -59,10 +63,10 @@ export default function LoginModal({
           onChange={(e) => setPassword(e.target.value)}
         />
 
-        <button className="btn mt-2" onClick={handleLogin} disabled={loading}>
+        <button className="btn mt-2" type="submit" disabled={loading}>
           {loading ? "Logging in..." : "Login"}
         </button>
-      </div>
+      </form>
     </Modal>
   );
 }

@@ -4,11 +4,13 @@ import { Song } from "@/app/types";
 import { supabase } from "@/lib/supabaseClient";
 import { v4 as uuidv4 } from "uuid";
 import React, { useState } from "react";
-import { useSongs } from "../app/contexts/SongsContext"; // ✅ import context
+import { useSongs } from "../../app/contexts/SongsContext"; // ✅ import context
 import { searchSpotifyTrackByName } from "@/app/helpers/searchSpotifyTrackByName";
+import { useAuth } from "@/app/contexts/AuthContext";
 
 function AddSong() {
-  const { currentUser, refetchSongs } = useSongs(); // ✅ use from context
+  const { currentProfile, refetchSongs } = useSongs(); // ✅ use from context
+  const { isLoggedIn } = useAuth(); // ✅ use from context
 
   const [showAddForm, setShowAddForm] = useState(false);
   const [url, setUrl] = useState<string>("");
@@ -17,7 +19,7 @@ function AddSong() {
   );
 
   async function handleAddSong() {
-    if (!currentUser) {
+    if (!currentProfile) {
       alert("Bir kullanıcı seçmelisin.");
       return;
     }
@@ -36,14 +38,13 @@ function AddSong() {
     } else {
       songInfo = await getSongInfo(url);
     }
-    console.log(songInfo);
     const newSong: Song = {
       id: uuidv4(),
       title: songInfo.title,
       artist: songInfo.artist,
       youtubeUrl: songInfo.youtubeUrl,
       spotifyUrl: songInfo.spotifyUrl,
-      addedBy: currentUser.id,
+      addedBy: currentProfile.id,
       category,
     };
 
@@ -100,13 +101,23 @@ function AddSong() {
           </div>
         </div>
       ) : (
-        <div className="flex flex-row gap-4 justify-end">
-          <button className="btn" onClick={() => setShowAddForm(true)}>
-            Link ile Şarkı Ekle
-          </button>
-          <button className="btn" onClick={() => setShowAddForm(true)}>
-            Arama ile Şarkı Ekle
-          </button>
+        <div>
+          {isLoggedIn ? (
+            <div className="flex flex-row gap-4 justify-end">
+              <button className="btn" onClick={() => setShowAddForm(true)}>
+                Link ile Şarkı Ekle
+              </button>
+              <button className="btn" onClick={() => setShowAddForm(true)}>
+                Arama ile Şarkı Ekle
+              </button>
+            </div>
+          ) : (
+            <div className="flex flex-row gap-4 justify-end">
+              <button className="btn !pointer-events-none opacity-60">
+                Şarkı Eklemek İçin Giriş Yapın
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

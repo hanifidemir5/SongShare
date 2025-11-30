@@ -1,10 +1,6 @@
 {
   "compilerOptions": {
-    "lib": [
-      "dom",
-      "dom.iterable",
-      "es2021"
-    ],
+    "lib": ["dom", "dom.iterable", "es2021"],
     "allowJs": false,
     "skipLibCheck": true,
     "strict": true,
@@ -22,11 +18,7 @@
         "name": "next"
       }
     ],
-    "types": [
-      "node",
-      "react",
-      "react-dom"
-    ],
+    "types": ["node", "react", "react-dom"],
     "target": "ES2017",
 
     /* 🔑 Eklenen kısım */
@@ -39,9 +31,9 @@
     "next-env.d.ts",
     "**/*.ts",
     "**/*.tsx",
-    ".next/types/**/*.ts"
+    ".next/types/**/*.ts",
+    "app/server/server.jsx",
+    "app/server/server.jsx"
   ],
-  "exclude": [
-    "node_modules"
-  ]
+  "exclude": ["node_modules"]
 }

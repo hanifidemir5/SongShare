@@ -39,8 +39,8 @@ export const SongsProvider = ({ children }: Props) => {
       return;
     }
     setProfileList(data ?? []);
-    // set first user as current by default
-    if (data && data.length > 0) setCurrentProfile(data[0]);
+    if ((data && data.length > 0) || currentProfile == null)
+      setCurrentProfile(data[0]);
   };
 
   React.useEffect(() => {

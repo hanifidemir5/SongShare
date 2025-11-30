@@ -6,9 +6,13 @@ import { Song } from "../types";
  * @param song Song object containing the URL
  * @param playlistId ID of the YouTube playlist
  */
-export async function addToYouTubePlaylist(token: string | null, song: Song, playlistId: string | null) {
-  if (!playlistId) return alert("Please select a playlist");
-  if (!token) return alert("You must be logged in");
+export async function addToYouTubePlaylist(
+  token: string | null,
+  song: Song,
+  playlistId: string | null
+) {
+  if (!playlistId) return alert("Oynatma Listesi Seç");
+  if (!token) return alert("Giriş Yapmış Olmalısın");
 
   // Extract YouTube video ID from URL
   // Handles URLs like:
@@ -28,14 +32,17 @@ export async function addToYouTubePlaylist(token: string | null, song: Song, pla
     },
   };
 
-  const response = await fetch("https://www.googleapis.com/youtube/v3/playlistItems?part=snippet", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body),
-  });
+  const response = await fetch(
+    "https://www.googleapis.com/youtube/v3/playlistItems?part=snippet",
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    }
+  );
 
   if (response.ok) {
     alert(`Added "${song.title}" to YouTube playlist!`);

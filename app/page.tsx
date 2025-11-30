@@ -1,11 +1,9 @@
 "use client";
 
 import Header from "@/components/Header";
-import SongTable from "@/components/SongTable";
-import AddSong from "@/components/AddSong";
+import SongTable from "@/components/layout/SongTable/SongTable";
+import AddSong from "@/components/operaitons/AddSong";
 import { useSongs } from "./contexts/SongsContext";
-import { useEffect } from "react";
-import { fetchSpotifyProfile } from "./services/auth/spotifyAuth";
 
 export default function HomePage() {
   const {

@@ -2,7 +2,7 @@
 import { Song } from "@/app/types";
 import { supabase } from "@/lib/supabaseClient";
 import React, { useEffect, useState } from "react";
-import { useSongs } from "../app/contexts/SongsContext";
+import { useSongs } from "@/app/contexts/SongsContext";
 
 type Props = {
   showUpdateForm: boolean;

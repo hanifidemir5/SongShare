@@ -4,8 +4,11 @@ export async function handleSpotifyCallback(authUser: {
   id: string;
   email: string | null;
   user_metadata?: any;
+  spotifyId: string | null;
+  spotifyAccessToken: string | null | undefined;
+  spotifyRefreshToken: string | null | undefined;
 }) {
-  const spotifyId = authUser.user_metadata?.spotify_id ?? null;
+  const spotifyId = authUser.user_metadata?.provider_id ?? null;
   const displayName =
     authUser.user_metadata?.name ?? authUser.email ?? "Unknown";
 
@@ -23,6 +26,7 @@ export async function handleSpotifyCallback(authUser: {
         spotify_id: spotifyId,
         is_spotify_connected: true,
         name: existingProfile.name ?? displayName,
+        spotify_access_token: authUser.spotifyAccessToken,
       })
       .eq("id", authUser.id);
 
@@ -33,16 +37,17 @@ export async function handleSpotifyCallback(authUser: {
   const { error: profileError } = await supabase
     .from("profiles")
     .insert({
-      id: authUser.id, // tie profile to users table
+      id: authUser.id,
       email: authUser.email,
       name: displayName,
       spotify_id: spotifyId,
       is_spotify_connected: true,
+      spotify_access_token: authUser.spotifyAccessToken,
     })
     .select()
     .single();
 
   if (profileError) throw profileError;
 
-  return;
+  return spotifyId;
 }

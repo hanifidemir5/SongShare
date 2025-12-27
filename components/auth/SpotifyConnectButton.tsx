@@ -2,35 +2,39 @@
 import { useAuth } from "@/app/contexts/AuthContext";
 import React from "react";
 
-interface SpotifyConnectButtonProps {
-  profile?: {
-    is_spotify_connected: boolean;
-  };
-}
+// Props interface'ine artık gerek yok, çünkü veriyi context'ten alacağız.
 
-const SpotifyConnectButton: React.FC<SpotifyConnectButtonProps> = ({
-  profile,
-}) => {
-  const { loading, connectSpotify, disconnectSpotify } = useAuth();
+const SpotifyConnectButton = () => {
+  // 'profile' verisini de buradan çekiyoruz
+  const { loading, connectSpotify, disconnectSpotify, profile } = useAuth();
 
-  if (loading) return <p>Checking Spotify...</p>;
+  // Yükleme sırasında butonun kaybolmaması için basit bir loading durumu veya
+  // butonun disabled hali daha şık olabilir ama şimdilik senin yapını koruyorum.
+  if (loading)
+    return <p className="text-xs text-gray-500">Kontrol ediliyor...</p>;
+
+  // Bağlantı durumunu kontrol et
+  const isConnected = profile?.is_spotify_connected;
 
   return (
     <div className="flex w-full">
       <div className="flex flex-col w-full">
         <button
           className={
-            profile?.is_spotify_connected
-              ? "hover:bg-[rgb(99_102_241/1)] text-left px-3 py-2 rounded-md text-green-600"
-              : "bg-green-600 hover:bg-green-400 text-left px-3 py-2 rounded-md text-gray-100"
+            isConnected
+              ? "hover:bg-red-500 hover:text-white bg-gray-100 text-left px-3 py-2 rounded-md text-green-700 transition-colors"
+              : "bg-green-600 hover:bg-green-500 text-left px-3 py-2 rounded-md text-white transition-colors"
           }
-          onClick={
-            profile?.is_spotify_connected ? disconnectSpotify : connectSpotify
-          }
+          onClick={async () => {
+            // Fonksiyonları asenkron çağırıp hata yönetimi eklemek iyi bir pratiktir
+            if (isConnected) {
+              await disconnectSpotify();
+            } else {
+              await connectSpotify();
+            }
+          }}
         >
-          {profile?.is_spotify_connected
-            ? "Spotify'dan Çıkış Yap"
-            : "Spotify İle Bağlan"}
+          {isConnected ? "Spotify Bağlantısını Kes" : "Spotify İle Bağlan"}
         </button>
       </div>
     </div>

@@ -36,10 +36,6 @@ export default function SpotifyCallbackPage() {
         console.log(authUser.identities);
         const providerAccessToken = data?.session.provider_token;
         const providerRefreshToken = data?.session.provider_refresh_token;
-        // console.log(data?.session.access_token);
-        // console.log(data?.session.refresh_token);
-        // console.log(data?.session.provider_refresh_token);
-        // console.log(data?.session.provider_token);
 
         await handleSpotifyCallback({
           id: authUser.id,
@@ -50,7 +46,7 @@ export default function SpotifyCallbackPage() {
           spotifyRefreshToken: providerRefreshToken,
         });
 
-        // router.replace("/");
+        router.replace("/");
       } catch (error) {
         console.error("Spotify callback error", error);
         router.replace("/");

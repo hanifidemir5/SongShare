@@ -5,75 +5,51 @@ import SpotifyConnectButton from "./SpotifyConnectButton";
 import { useAuth } from "@/app/contexts/AuthContext";
 import YouTubeConnectButton from "./YoutubeConnectButton";
 
-export default function LoginButtons({
-  onOpenLogin,
-  onOpenRegister,
-}: {
-  onOpenLogin: () => void;
-  onOpenRegister: () => void;
-}) {
+export default function LoginButtons() {
   const [isOpen, setIsOpen] = useState(false);
   const { loading, isLoggedIn, logout, profile } = useAuth();
 
-  if (loading) return <p>Checking Spotify...</p>;
+  // Yükleme sırasında basit bir yazı veya spinner
+  if (loading) return <div className="text-white">...</div>;
 
   return (
     <div className="relative inline-block text-left">
-      {/* Main Button */}
-      {isLoggedIn ? (
-        <button
-          onClick={() => setIsOpen((prev) => !prev)}
-          className="btn w-48 text-white px-6 py-2 rounded-lg shadow-md"
-        >
-          {profile?.name}
-        </button>
-      ) : (
-        <button
-          onClick={() => setIsOpen((prev) => !prev)}
-          className="btn w-48 text-white px-6 py-2 rounded-lg shadow-md"
-        >
-          Giriş Yap / Kayıt Ol
-        </button>
-      )}
+      {/* Ana Buton: Giriş yapılmışsa isim, yapılmamışsa genel başlık */}
+      <button
+        onClick={() => setIsOpen((prev) => !prev)}
+        className="btn w-48 text-white px-6 py-2 rounded-lg shadow-md bg-indigo-600 hover:bg-indigo-700 transition-colors"
+      >
+        {isLoggedIn ? profile?.name || "Hesabım" : "Giriş Yap / Bağlan"}
+      </button>
 
-      {/* Dropdown Menu */}
+      {/* Dropdown Menü */}
       {isOpen && (
         <div
-          className="absolute right-0 mt-2 w-56 origin-top-right rounded-xl bg-[rgb(79_70_229/1)] shadow-lg ring-1 ring-black/10 divide-y divide-gray-100 z-50"
+          className="absolute right-0 mt-2 w-64 origin-top-right rounded-xl bg-[rgb(79_70_229/1)] shadow-lg ring-1 ring-black/10 z-50 p-2"
           onMouseLeave={() => setIsOpen(false)}
         >
-          <div className="p-2 flex flex-col text-sm text-gray-700 gap-2">
-            {/* Regular login/register (you can later link these to modals or routes) */}
-            {isLoggedIn ? (
-              <div className="flex flex-col w-full">
+          <div className="flex flex-col gap-2">
+            {/* 1. KISIM: PLATFORM BUTONLARI (Her zaman görünür) */}
+            {/* Bu butonlar kendi içlerinde "Bağlan" veya "Bağlantıyı Kes" durumunu yönetir */}
+            <SpotifyConnectButton />
+            <YouTubeConnectButton />
+
+            {/* 2. KISIM: ÇIKIŞ BUTONU (Sadece giriş yapılmışsa görünür) */}
+            {isLoggedIn && (
+              <>
+                {/* Ayırıcı Çizgi */}
+                <div className="border-t border-indigo-400/30 my-1"></div>
+
                 <button
-                  className="hover:bg-gray-100 text-left px-3 py-2 rounded-md text-red-600 w-full"
-                  onClick={logout}
+                  className="w-full text-left px-3 py-2 rounded-md text-white hover:bg-red-500 transition-colors text-sm font-medium"
+                  onClick={() => {
+                    logout();
+                    setIsOpen(false);
+                  }}
                 >
                   Çıkış Yap
                 </button>
-              </div>
-            ) : (
-              <div className="flex flex-col">
-                <button
-                  className="hover:bg-gray-100 text-left px-3 py-2 text-white hover:text-black rounded-md"
-                  onClick={onOpenLogin}
-                >
-                  Giriş Yap
-                </button>
-                <button
-                  className="hover:bg-gray-100 mt-2 text-left px-3 text-white hover:text-black py-2 rounded-md"
-                  onClick={onOpenRegister}
-                >
-                  Kayıt Ol
-                </button>
-              </div>
-            )}
-            {isLoggedIn && (
-              <div>
-                <SpotifyConnectButton />
-                <YouTubeConnectButton />
-              </div>
+              </>
             )}
           </div>
         </div>

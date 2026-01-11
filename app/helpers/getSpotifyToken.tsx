@@ -1,42 +1,37 @@
 // /app/helpers/authUtils.ts
 
 import { supabase } from "@/lib/supabaseClient";
+import { getUserToken } from "./tokenManager";
 
-// Tipi zorlamak yerine ExtendedUserIdentity tipini dışarıda tanımlayabiliriz
-// (Daha önceki yanıtlarda önerilen en iyi yöntem, ancak şimdilik 'any' ile devam edilebilir).
-
-/**
- * Spotify Access Token ve Refresh Token'ı Supabase oturumundan çeker.
- * @returns {Promise<{accessToken: string | null, refreshToken: string | null}>} Token nesnesi
- */
 export async function getSpotifyTokens() {
   try {
-    const { data, error } = await supabase.auth.getSession();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { accessToken: null, refreshToken: null };
 
-    if (error || !data?.session) {
-      console.error(
-        "Kullanıcı oturumu bulunamadı veya bir hata oluştu:",
-        error?.message
-      );
-      return { accessToken: null, refreshToken: null };
-    }
-
-    const accessToken = data.session?.provider_token ?? null;
-    const refreshToken = data.session?.provider_refresh_token ?? null;
-
-    return { accessToken, refreshToken };
+    const tokens = await getUserToken(user.id, "spotify");
+    return tokens || { accessToken: null, refreshToken: null };
   } catch (err) {
-    console.error("Spotify token alma sırasında beklenmeyen hata:", err);
+    console.error("Spotify token alma hatası:", err);
     return { accessToken: null, refreshToken: null };
   }
 }
 
 export async function getYouTubeTokens() {
-  const { data, error } = await supabase.auth.getSession();
-  if (error || !data?.session) return { accessToken: null, refreshToken: null };
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { accessToken: null, refreshToken: null };
 
-  const accessToken = data.session.provider_token ?? null;
-  const refreshToken = data.session.provider_refresh_token ?? null;
+    // Try 'youtube' first (as saved in handleYouTubeCallback)
+    let tokens = await getUserToken(user.id, "youtube");
 
-  return { accessToken, refreshToken };
+    // Fallback to 'google' if needed (sometimes saved as google provider)
+    if (!tokens) {
+      tokens = await getUserToken(user.id, "google");
+    }
+
+    return tokens || { accessToken: null, refreshToken: null };
+  } catch (err) {
+    console.error("YouTube token retrieval error:", err);
+    return { accessToken: null, refreshToken: null };
+  }
 }

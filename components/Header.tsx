@@ -27,7 +27,14 @@ export default function Header({
     setIsOpen(false);
   };
 
-  const otherProfiles = profileList.filter(
+  // Filter to only show profiles in the same group (if user has a group)
+  const groupFilteredProfiles = currentProfile?.group_id
+    ? profileList.filter(
+      (profile) => profile.group_id === currentProfile.group_id
+    )
+    : profileList;
+
+  const otherProfiles = groupFilteredProfiles.filter(
     (profile) => profile.id !== currentProfile?.id
   );
 
@@ -62,61 +69,64 @@ export default function Header({
         onChange={(e) => onSearch(e.target.value)}
       />
       <LoginButtons />
-      <div className="relative inline-block text-left z-40">
-        <button
-          onClick={() => setIsOpen((prev) => !prev)}
-          className="btn !bg-gray-800 hover:!bg-gray-700 text-white !px-4 py-2 text-sm flex items-center gap-3 rounded-xl border border-white/5 transition-all duration-200"
-        >
-          <div className="flex flex-col items-start">
-            <span className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">
-              Görüntülenen
-            </span>
-            <span className="font-medium">
-              {currentProfile ? currentProfile.name : "Seçiniz"}
-            </span>
-          </div>
-          <span className={`transition-transform duration-300 ${isOpen ? "rotate-180" : ""}`}>
-            <FontAwesomeIcon icon={faArrowDown} className="w-3 h-3 text-indigo-400" />
-          </span>
-        </button>
-
-        {isOpen && (
-          <>
-            <div
-              className="fixed inset-0 z-40"
-              onClick={() => setIsOpen(false)}
-            />
-            <div className="absolute right-0 mt-2 w-64 origin-top-right rounded-xl bg-gray-900/95 backdrop-blur-xl border border-white/10 shadow-2xl py-2 z-50 animate-in fade-in zoom-in-95 duration-200">
-              <div className="px-4 py-2 border-b border-white/5 mb-2">
-                <p className="text-xs text-indigo-400 font-semibold uppercase tracking-wider">
-                  Profil Seç
-                </p>
-                <p className="text-[10px] text-gray-500 mt-0.5">
-                  Başka bir kullanıcının listelerini görüntüle
-                </p>
-              </div>
-
-              <div className="max-h-64 overflow-y-auto custom-scrollbar px-2 space-y-1">
-                {profileList.map((Profile) => (
-                  <button
-                    key={Profile.id}
-                    onClick={() => handleSelect(Profile)}
-                    className={`w-full text-left px-3 py-2.5 rounded-lg text-sm transition-all duration-200 flex items-center justify-between group ${Profile.id === currentProfile?.id
-                      ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/20"
-                      : "text-gray-400 hover:bg-white/5 hover:text-white"
-                      }`}
-                  >
-                    <span className="font-medium">{Profile.name}</span>
-                    {Profile.id === currentProfile?.id && (
-                      <div className="w-2 h-2 rounded-full bg-white animate-pulse" />
-                    )}
-                  </button>
-                ))}
-              </div>
+      {/* Only show profile selector for logged in users */}
+      {user && (
+        <div className="relative inline-block text-left z-40">
+          <button
+            onClick={() => setIsOpen((prev) => !prev)}
+            className="btn !bg-gray-800 hover:!bg-gray-700 text-white !px-4 py-2 text-sm flex items-center gap-3 rounded-xl border border-white/5 transition-all duration-200"
+          >
+            <div className="flex flex-col items-start">
+              <span className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">
+                Görüntülenen
+              </span>
+              <span className="font-medium">
+                {currentProfile ? currentProfile.name : "Seçiniz"}
+              </span>
             </div>
-          </>
-        )}
-      </div>
+            <span className={`transition-transform duration-300 ${isOpen ? "rotate-180" : ""}`}>
+              <FontAwesomeIcon icon={faArrowDown} className="w-3 h-3 text-indigo-400" />
+            </span>
+          </button>
+
+          {isOpen && (
+            <>
+              <div
+                className="fixed inset-0 z-40"
+                onClick={() => setIsOpen(false)}
+              />
+              <div className="absolute right-0 mt-2 w-64 origin-top-right rounded-xl bg-gray-900/95 backdrop-blur-xl border border-white/10 shadow-2xl py-2 z-50 animate-in fade-in zoom-in-95 duration-200">
+                <div className="px-4 py-2 border-b border-white/5 mb-2">
+                  <p className="text-xs text-indigo-400 font-semibold uppercase tracking-wider">
+                    Profil Seç
+                  </p>
+                  <p className="text-[10px] text-gray-500 mt-0.5">
+                    Grup üyelerinin listelerini görüntüle
+                  </p>
+                </div>
+
+                <div className="max-h-64 overflow-y-auto custom-scrollbar px-2 space-y-1">
+                  {groupFilteredProfiles.map((Profile) => (
+                    <button
+                      key={Profile.id}
+                      onClick={() => handleSelect(Profile)}
+                      className={`w-full text-left px-3 py-2.5 rounded-lg text-sm transition-all duration-200 flex items-center justify-between group ${Profile.id === currentProfile?.id
+                        ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/20"
+                        : "text-gray-400 hover:bg-white/5 hover:text-white"
+                        }`}
+                    >
+                      <span className="font-medium">{Profile.name}</span>
+                      {Profile.id === currentProfile?.id && (
+                        <div className="w-2 h-2 rounded-full bg-white animate-pulse" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      )}
     </header>
   );
 }

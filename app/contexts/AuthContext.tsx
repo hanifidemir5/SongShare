@@ -139,6 +139,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         "playlist-modify-private",
         "playlist-modify-public",
         "playlist-read-collaborative",
+        "user-read-recently-played",
       ].join(" "),
       queryParams: {
         show_dialog: "true",
@@ -183,8 +184,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const disconnectSpotify = async () => {
     if (!profile?.id) return;
 
+    // 0. Fetch Fresh User to ensure identities are up-to-date
+    const { data: { user: freshUser } } = await supabase.auth.getUser();
+    const targetUser = freshUser || user;
+
     // 1. Unlink from Supabase Auth
-    const spotifyIdentity = user?.identities?.find(
+    const spotifyIdentity = targetUser?.identities?.find(
       (id: any) => id.provider === "spotify"
     );
     console.log("DEBUG: Spotify Identity Full Object:", JSON.stringify(spotifyIdentity, null, 2));
@@ -199,10 +204,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
 
     if (identityUUID) {
-      const { error } = await supabase.auth.unlinkIdentity(identityUUID);
-      if (error) console.error("Spotify Unlink Error:", error);
+      try {
+        console.log("DEBUG: Attempting to unlink UUID:", identityUUID);
+        const { error } = await supabase.auth.unlinkIdentity(identityUUID);
+        if (error) throw error;
+      } catch (err) {
+        console.error("Spotify Unlink Error (Non-fatal - proceeding with profile disconnect):", err);
+      }
     } else {
-      console.warn("DEBUG: Could not find a valid UUID for Spotify Identity. Skipping unlinkIdentity to prevent crash.");
+      console.warn("DEBUG: Could not find a valid UUID for Spotify Identity. Skipping unlinkIdentity.");
     }
 
     // 2. Update Profile
@@ -265,8 +275,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const disconnectYouTube = async () => {
     if (!profile?.id) return;
 
+    // 0. Fetch Fresh User
+    const { data: { user: freshUser } } = await supabase.auth.getUser();
+    const targetUser = freshUser || user;
+
     // 1. Unlink from Supabase Auth
-    const googleIdentity = user?.identities?.find(
+    const googleIdentity = targetUser?.identities?.find(
       (id: any) => id.provider === "google"
     );
     console.log("DEBUG: Google Identity Full Object:", JSON.stringify(googleIdentity, null, 2));
@@ -281,11 +295,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
 
     if (identityUUID) {
-      console.log("DEBUG: Found valid UUID for Unlink:", identityUUID);
-      const { error } = await supabase.auth.unlinkIdentity(identityUUID);
-      if (error) console.error("YouTube Unlink Error:", error);
+      try {
+        console.log("DEBUG: Attempting to unlink UUID:", identityUUID);
+        const { error } = await supabase.auth.unlinkIdentity(identityUUID);
+        if (error) throw error;
+      } catch (err) {
+        console.error("YouTube Unlink Error (Non-fatal - proceeding with profile disconnect):", err);
+      }
     } else {
-      console.warn("DEBUG: Could not find a valid UUID for Google Identity. Skipping unlinkIdentity to prevent crash.");
+      console.warn("DEBUG: Could not find a valid UUID for Google Identity. Skipping unlinkIdentity.");
     }
 
     // 2. Update Profile

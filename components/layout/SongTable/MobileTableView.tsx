@@ -33,9 +33,7 @@ const MobileTableView = ({
   const { profile, isLoggedIn } = useAuth();
   const { play } = usePlayer();
 
-  // Aynı mantık: sadece profil sahibiyse edit/sil görünür
-  const canEditOrDelete =
-    isLoggedIn && currentProfile && profile && currentProfile.id === profile.id;
+
 
   const handlePlay = (song: Song, type: 'youtube' | 'spotify') => {
     const url = type === 'youtube' ? song.youtubeUrl : song.spotifyUrl;
@@ -92,6 +90,7 @@ const MobileTableView = ({
               <span className="badge text-xs">yok</span>
             )}
 
+            {/* Playlist Ekleme Butonu - History için de gösterilebilir, sonuçta playliste eklemek isteyebilir */}
             {(profile?.is_spotify_connected && spotifyPlaylists.length > 0) ||
               (profile?.is_youtube_connected && youtubePlaylists.length > 0) ? (
               <button
@@ -117,8 +116,8 @@ const MobileTableView = ({
               </span>
             )}
 
-            {/* Düzenle — SADECE ÖZ SAHİBİ GÖRÜR */}
-            {canEditOrDelete && (
+            {/* Düzenle — SADECE ÖZ SAHİBİ GÖRÜR ve HISTORY DEĞİLSE */}
+            {isLoggedIn && currentProfile && profile && currentProfile.id === profile.id && song.category !== 'history' && (
               <button
                 className="btn !bg-yellow-600 hover:!bg-yellow-500 !px-2 !py-1 text-xs"
                 onClick={() => {
@@ -133,8 +132,8 @@ const MobileTableView = ({
               </button>
             )}
 
-            {/* Sil — SADECE ÖZ SAHİBİ GÖRÜR */}
-            {canEditOrDelete && (
+            {/* Sil — SADECE ÖZ SAHİBİ GÖRÜR ve HISTORY DEĞİLSE */}
+            {isLoggedIn && currentProfile && profile && currentProfile.id === profile.id && song.category !== 'history' && (
               <button
                 className="btn !bg-red-600 hover:!bg-red-500 !px-2 !py-1 text-xs"
                 onClick={() => song.id && handleDelete(song.id)}

@@ -139,7 +139,7 @@ const DesktopTableView: React.FC<DesktopTableProps> = ({
                     </span>
                   )}
 
-                  {canEditOrDelete && (
+                  {isLoggedIn && currentProfile && profile && currentProfile.id === profile.id && song.category !== 'history' && (
                     <>
                       <button
                         className="btn !bg-gray-700 hover:!bg-gray-600 !px-2 !py-1.5 text-xs rounded-lg"

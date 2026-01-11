@@ -7,6 +7,7 @@ import { Song, Profile } from "../types";
 interface SongsContextValue {
   recommendedSongs: Song[];
   favoriteSongs: Song[];
+  recentlyPlayed: Song[];
   isLoading: boolean;
   currentProfile: Profile | null;
   setCurrentProfile: (profile: Profile) => void;
@@ -30,6 +31,7 @@ export const SongsProvider = ({ children }: Props) => {
   const [currentProfile, setCurrentProfile] = React.useState<Profile | null>(
     null
   );
+  const [recentlyPlayed, setRecentlyPlayed] = React.useState<Song[]>([]);
 
   // Fetch all users once on mount
   const fetchProfiles = async () => {
@@ -57,6 +59,45 @@ export const SongsProvider = ({ children }: Props) => {
       .eq("addedBy", currentProfile.id);
     if (error) throw error;
     return data ?? [];
+  };
+
+  // Fetch Spotify History
+  const fetchSpotifyHistory = async () => {
+    if (!currentProfile?.is_spotify_connected || !currentProfile?.spotify_access_token) {
+      setRecentlyPlayed([]);
+      return;
+    }
+
+    try {
+      const response = await fetch("https://api.spotify.com/v1/me/player/recently-played?limit=10", {
+        headers: {
+          Authorization: `Bearer ${currentProfile.spotify_access_token}`
+        }
+      });
+
+      if (response.status === 401) {
+        console.warn("Spotify token expired or invalid.");
+        // Optionally clear token here or handle refresh
+        return;
+      }
+
+      const data = await response.json();
+      const history = data.items.map((item: any) => ({
+        id: `${item.track.id}-${item.played_at}`, // Keep ID unique for React Key
+        title: item.track.name,
+        artist: item.track.artists.map((a: any) => a.name).join(", "),
+        spotifyUrl: item.track.external_urls.spotify,
+        addedBy: currentProfile.id,
+        category: "history",
+        // Use played_at as created_at for sorting if needed
+        created_at: item.played_at
+      }));
+
+      setRecentlyPlayed(history);
+
+    } catch (error) {
+      console.error("Error fetching Spotify history:", error);
+    }
   };
 
   // Add this inside SongsProvider, under fetchProfiles effect
@@ -92,6 +133,11 @@ export const SongsProvider = ({ children }: Props) => {
     enabled: !!currentProfile, // only fetch if currentUser exists
   });
 
+  // Trigger history fetch when profile changes
+  React.useEffect(() => {
+    fetchSpotifyHistory();
+  }, [currentProfile]);
+
   const recommendedSongs = songs
     .filter((s) => s.category === "recommended")
     .sort(
@@ -112,6 +158,7 @@ export const SongsProvider = ({ children }: Props) => {
       value={{
         recommendedSongs,
         favoriteSongs,
+        recentlyPlayed,
         isLoading,
         currentProfile,
         setCurrentProfile,

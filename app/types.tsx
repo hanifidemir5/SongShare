@@ -14,4 +14,7 @@ export type Profile = {
   name: string | null;
   email?: string | null;
   source: string | null;
+  is_spotify_connected?: boolean;
+  is_youtube_connected?: boolean;
+  spotify_access_token?: string | null;
 };

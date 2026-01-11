@@ -13,6 +13,7 @@ export default function HomePage() {
   const {
     recommendedSongs,
     favoriteSongs,
+    recentlyPlayed,
     profileList,
     currentProfile,
     setCurrentProfile,
@@ -54,6 +55,7 @@ export default function HomePage() {
       <PlaylistTabs
         recommendedSongs={recommendedSongs}
         favoriteSongs={favoriteSongs}
+        recentlyPlayed={recentlyPlayed}
       />
     </main>
   );

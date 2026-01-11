@@ -16,6 +16,9 @@ interface MobileTableProps {
   youtubePlaylists: any[];
 }
 
+import { extractSpotifyId, extractYoutubeId } from "@/app/helpers/mediaUtils";
+import { usePlayer } from "@/app/contexts/PlayerContext";
+
 const MobileTableView = ({
   currentSongs,
   setSongToAdd,
@@ -28,10 +31,23 @@ const MobileTableView = ({
 }: MobileTableProps) => {
   const { currentProfile } = useSongs();
   const { profile, isLoggedIn } = useAuth();
+  const { play } = usePlayer();
 
   // Aynı mantık: sadece profil sahibiyse edit/sil görünür
   const canEditOrDelete =
     isLoggedIn && currentProfile && profile && currentProfile.id === profile.id;
+
+  const handlePlay = (song: Song, type: 'youtube' | 'spotify') => {
+    const url = type === 'youtube' ? song.youtubeUrl : song.spotifyUrl;
+    const id = type === 'youtube' ? extractYoutubeId(url) : extractSpotifyId(url);
+
+    if (id) {
+      play(id, type);
+    } else {
+      // Fallback to new tab if parsing fails
+      window.open(url, '_blank');
+    }
+  };
 
   return (
     <div className="md:hidden space-y-3 min-h-28">
@@ -55,21 +71,21 @@ const MobileTableView = ({
             {song.spotifyUrl || song.youtubeUrl ? (
               <span className="gap-2 flex items-center justify-center text-2xl p-2 rounded-full">
                 {song.spotifyUrl && (
-                  <a target="_blank" href={song.spotifyUrl}>
+                  <button onClick={() => handlePlay(song, 'spotify')}>
                     <FontAwesomeIcon
                       icon={faSpotify}
                       className="text-[#1DB954] hover:scale-125 transition-transform"
                     />
-                  </a>
+                  </button>
                 )}
 
                 {song.youtubeUrl && (
-                  <a target="_blank" href={song.youtubeUrl}>
+                  <button onClick={() => handlePlay(song, 'youtube')}>
                     <FontAwesomeIcon
                       icon={faYoutube}
                       className="text-[#FF0000] hover:scale-125 transition-transform"
                     />
-                  </a>
+                  </button>
                 )}
               </span>
             ) : (
@@ -130,6 +146,7 @@ const MobileTableView = ({
         </div>
       ))}
     </div>
+
   );
 };
 

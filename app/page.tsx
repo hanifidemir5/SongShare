@@ -2,18 +2,23 @@
 
 import { useSearchParams, useRouter } from "next/navigation";
 import { toast } from "react-toastify";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Header from "@/components/Header";
 import PlaylistTabs from "@/components/layout/PlaylistTabs";
 import AddSong from "@/components/operaitons/AddSong";
 import { useSongs } from "./contexts/SongsContext";
 import { useAuth } from "./contexts/AuthContext";
 
+import GroupManagement from "@/components/GroupManagement";
+
 export default function HomePage() {
   const {
     recommendedSongs,
     favoriteSongs,
     recentlyPlayed,
+    topTracks,
+    globalTopTracks,
+    groupSongs,
     profileList,
     currentProfile,
     setCurrentProfile,
@@ -22,6 +27,8 @@ export default function HomePage() {
 
   const searchParams = useSearchParams();
   const router = useRouter();
+
+  const [showGroupModal, setShowGroupModal] = useState(false);
 
   useEffect(() => {
     const error = searchParams.get("error");
@@ -50,12 +57,45 @@ export default function HomePage() {
         user={user}
       />
 
+      {/* Group Management Button - only for logged in users */}
+      {user && (
+        <button
+          onClick={() => setShowGroupModal(true)}
+          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+        >
+          <span>👥</span> Grup İşlemleri
+        </button>
+      )}
+
+      {/* Group Modal */}
+      {showGroupModal && (
+        <div
+          className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={() => setShowGroupModal(false)}
+        >
+          <div
+            className="w-full max-w-2xl bg-[#0a0a0a] border border-white/10 rounded-2xl shadow-2xl relative max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setShowGroupModal(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-white z-10"
+            >
+              ✕
+            </button>
+            <GroupManagement />
+          </div>
+        </div>
+      )}
+
       <AddSong />
 
       <PlaylistTabs
         recommendedSongs={recommendedSongs}
         favoriteSongs={favoriteSongs}
         recentlyPlayed={recentlyPlayed}
+        topTracks={topTracks}
+        globalTopTracks={globalTopTracks}
       />
     </main>
   );

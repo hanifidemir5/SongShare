@@ -195,19 +195,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     );
     console.log("DEBUG: Spotify Identity Full Object:", JSON.stringify(spotifyIdentity, null, 2));
 
-    let identityUUID = null;
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-    if (spotifyIdentity?.id && uuidRegex.test(spotifyIdentity.id)) {
-      identityUUID = spotifyIdentity.id;
-    } else if (spotifyIdentity?.identity_id && uuidRegex.test(spotifyIdentity.identity_id)) {
-      identityUUID = spotifyIdentity.identity_id;
-    }
-
-    if (identityUUID) {
+    // unlinkIdentity requires the full Identity object, not just the UUID
+    if (spotifyIdentity && spotifyIdentity.identity_id && uuidRegex.test(spotifyIdentity.identity_id)) {
       try {
-        console.log("DEBUG: Attempting to unlink UUID:", identityUUID);
-        const { error } = await supabase.auth.unlinkIdentity(identityUUID);
+        console.log("DEBUG: Attempting to unlink Spotify Identity:", spotifyIdentity.identity_id);
+        const { error } = await supabase.auth.unlinkIdentity({
+          identity_id: spotifyIdentity.identity_id,
+          provider: "spotify"
+        } as any);
         if (error) throw error;
       } catch (err) {
         console.error("Spotify Unlink Error (Non-fatal - proceeding with profile disconnect):", err);
@@ -286,19 +283,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     );
     console.log("DEBUG: Google Identity Full Object:", JSON.stringify(googleIdentity, null, 2));
 
-    let identityUUID = null;
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-    if (googleIdentity?.id && uuidRegex.test(googleIdentity.id)) {
-      identityUUID = googleIdentity.id;
-    } else if (googleIdentity?.identity_id && uuidRegex.test(googleIdentity.identity_id)) {
-      identityUUID = googleIdentity.identity_id;
-    }
-
-    if (identityUUID) {
+    // unlinkIdentity requires the full Identity object, not just the UUID
+    if (googleIdentity && googleIdentity.identity_id && uuidRegex.test(googleIdentity.identity_id)) {
       try {
-        console.log("DEBUG: Attempting to unlink UUID:", identityUUID);
-        const { error } = await supabase.auth.unlinkIdentity(identityUUID);
+        console.log("DEBUG: Attempting to unlink Google Identity:", googleIdentity.identity_id);
+        const { error } = await supabase.auth.unlinkIdentity({
+          identity_id: googleIdentity.identity_id,
+          provider: "google"
+        } as any);
         if (error) throw error;
       } catch (err) {
         console.error("YouTube Unlink Error (Non-fatal - proceeding with profile disconnect):", err);

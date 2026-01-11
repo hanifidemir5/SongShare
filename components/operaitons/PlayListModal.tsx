@@ -118,8 +118,9 @@ const PlaylistModal: React.FC<PlaylistModalProps> = ({
                 }
               } else if (selectedPlatform === "Youtube") {
                 const { accessToken } = await getYouTubeTokens();
+                const spotifyTokens = await getSpotifyTokens();
                 if (accessToken && song && selectedPlaylist) {
-                  addToYouTubePlaylist(accessToken, song, selectedPlaylist);
+                  addToYouTubePlaylist(accessToken, song, selectedPlaylist, spotifyTokens.accessToken);
                 } else {
                   console.error("YouTube token missing");
                   alert("YouTube oturumu açık değil veya token alınamadı.");

@@ -9,6 +9,13 @@ export type Song = {
   readonly created_at?: string;
 };
 
+export type Group = {
+  id: string;
+  name: string;
+  code: string;
+  created_by: string;
+};
+
 export type Profile = {
   id: string | null;
   name: string | null;
@@ -17,4 +24,6 @@ export type Profile = {
   is_spotify_connected?: boolean;
   is_youtube_connected?: boolean;
   spotify_access_token?: string | null;
+  group_id?: string | null;
+  group_role?: 'admin' | 'member' | null;
 };

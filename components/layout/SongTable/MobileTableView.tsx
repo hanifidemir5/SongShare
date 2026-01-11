@@ -76,9 +76,8 @@ const MobileTableView = ({
               <span className="badge text-xs">yok</span>
             )}
 
-            {/* Playlist'e Ekle */}
             {(profile?.is_spotify_connected && spotifyPlaylists.length > 0) ||
-            (profile?.is_youtube_connected && youtubePlaylists.length > 0) ? (
+              (profile?.is_youtube_connected && youtubePlaylists.length > 0) ? (
               <button
                 className="btn !bg-green-600 hover:!bg-green-500 !px-2 !py-1 text-xs"
                 onClick={() => {
@@ -90,7 +89,15 @@ const MobileTableView = ({
               </button>
             ) : (
               <span className="text-gray-500 text-xs whitespace-nowrap">
-                Eklemek için giriş yapın
+                {profile?.is_youtube_connected &&
+                  !youtubePlaylists?.length ? (
+                  "Youtube Playlisti Yok"
+                ) : profile?.is_spotify_connected &&
+                  !spotifyPlaylists?.length ? (
+                  "Spotify Playlisti Yok"
+                ) : (
+                  "Eklemek için giriş yapın"
+                )}
               </span>
             )}
 

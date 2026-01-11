@@ -3,7 +3,10 @@ import { Song } from "@/app/types";
 import { useAuth } from "@/app/contexts/AuthContext";
 import { addToSpotifyPlaylist } from "@/app/helpers/addToSpotifyPlaylist";
 import { addToYouTubePlaylist } from "@/app/helpers/addToYoutubePlaylist";
-import { getSpotifyAccessToken } from "@/app/helpers/spotifyTokenManager";
+import {
+  getSpotifyTokens,
+  getYouTubeTokens,
+} from "@/app/helpers/getSpotifyToken";
 
 interface Playlist {
   id: string;
@@ -46,11 +49,25 @@ const PlaylistModal: React.FC<PlaylistModalProps> = ({
           <option value="">Platform Seç</option>
 
           {profile?.is_youtube_connected && (
-            <option value="Youtube">Youtube</option>
+            <option
+              value="Youtube"
+              disabled={!youtubePlaylists || youtubePlaylists.length === 0}
+            >
+              {(!youtubePlaylists || youtubePlaylists.length === 0)
+                ? "No Playlist"
+                : "Youtube"}
+            </option>
           )}
 
           {profile?.is_spotify_connected && (
-            <option value="Spotify">Spotify</option>
+            <option
+              value="Spotify"
+              disabled={!spotifyPlaylists || spotifyPlaylists.length === 0}
+            >
+              {(!spotifyPlaylists || spotifyPlaylists.length === 0)
+                ? "No Playlist"
+                : "Spotify"}
+            </option>
           )}
         </select>
 
@@ -88,41 +105,31 @@ const PlaylistModal: React.FC<PlaylistModalProps> = ({
 
         {/* Butonlar */}
         <div className="flex justify-end gap-2">
-          {selectedPlatform === "Spotify" && (
-            <button
-              className="btn !bg-green-600 hover:!bg-green-500 !px-2 !py-1 text-xs"
-              onClick={() => {
-                if (profile?.spotify_access_token && song && selectedPlaylist) {
-                  addToSpotifyPlaylist(
-                    profile?.spotify_access_token,
-                    song,
-                    selectedPlaylist
-                  );
+          <button
+            className="btn !bg-green-600 hover:!bg-green-500 !px-2 !py-1 text-xs disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:!bg-green-600"
+            disabled={!selectedPlaylist}
+            onClick={async () => {
+              if (selectedPlatform === "Spotify") {
+                const { accessToken } = await getSpotifyTokens();
+                if (accessToken && song && selectedPlaylist) {
+                  addToSpotifyPlaylist(accessToken, song, selectedPlaylist);
+                } else {
+                  console.error("Spotify token missing");
                 }
-                onClose();
-              }}
-            >
-              Ekle
-            </button>
-          )}
-
-          {selectedPlatform === "Youtube" && (
-            <button
-              className="btn !bg-green-600 hover:!bg-green-500 !px-2 !py-1 text-xs"
-              onClick={() => {
-                if (profile?.youtube_access_token && song && selectedPlaylist) {
-                  addToYouTubePlaylist(
-                    profile?.youtube_access_token,
-                    song,
-                    selectedPlaylist
-                  );
+              } else if (selectedPlatform === "Youtube") {
+                const { accessToken } = await getYouTubeTokens();
+                if (accessToken && song && selectedPlaylist) {
+                  addToYouTubePlaylist(accessToken, song, selectedPlaylist);
+                } else {
+                  console.error("YouTube token missing");
+                  alert("YouTube oturumu açık değil veya token alınamadı.");
                 }
-                onClose();
-              }}
-            >
-              Ekle
-            </button>
-          )}
+              }
+              onClose();
+            }}
+          >
+            Ekle
+          </button>
 
           <button
             className="btn !bg-gray-600 hover:!bg-gray-500 !px-2 !py-1 text-xs"

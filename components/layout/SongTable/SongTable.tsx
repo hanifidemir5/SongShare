@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import type { Song } from "../../../app/types";
 import { getUserPlaylists as getSpotifyPlaylists } from "@/app/helpers/spotifyApi";
 import { getUserPlaylists as getYouTubePlaylists } from "@/app/helpers/youtubeApi";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faMusic } from "@fortawesome/free-solid-svg-icons";
 
 import { useSongs } from "@/app/contexts/SongsContext";
 import EditSong from "../../operaitons/EditSong";
@@ -74,15 +76,12 @@ export default function SongTable({ title, songs }: Props) {
           const code = apiError?.error?.code;
 
           if (code === 401) {
-            toast.warn("YouTube token has expired!", {
+            console.warn("YouTube token expired or invalid (401).");
+            toast.warn("YouTube oturumu zaman aşımına uğradı. Lütfen sayfayı yenileyin veya tekrar giriş yapın.", {
               position: "top-right",
               toastId: "youtube-expired",
             });
-            disconnectYouTube();
-
-            if (profile?.id) {
-              await fetchProfile(profile.id);
-            }
+            // disconnectYouTube(); // <-- REMOVED: Don't auto-disconnect
           } else {
             console.error(
               "YouTube oynatma listeleri çekilirken beklenmeyen hata:",
@@ -124,6 +123,16 @@ export default function SongTable({ title, songs }: Props) {
     <section className="card space-y-4">
       {isLoading ? (
         <p>Loading songs...</p>
+      ) : songs.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-10 text-gray-500">
+          <h2 className="text-xl font-semibold mb-2 self-start w-full text-left">
+            {title}
+          </h2>
+          <div className="flex flex-col items-center justify-center gap-3">
+            <FontAwesomeIcon icon={faMusic} className="text-4xl opacity-50" />
+            <p className="text-sm">Henüz şarkı eklenmemiş</p>
+          </div>
+        </div>
       ) : (
         <div>
           {/* Desktop */}

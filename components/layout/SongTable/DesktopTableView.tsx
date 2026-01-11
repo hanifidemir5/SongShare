@@ -39,15 +39,13 @@ const DesktopTableView: React.FC<DesktopTableProps> = ({
     isLoggedIn && currentProfile && profile && currentProfile.id === profile.id;
 
   return (
-    <table className="hidden md:table w-full border-collapse min-h-48">
+    <table className="hidden md:table w-full border-collapse min-h-48 table-fixed">
       <thead>
         <tr className="text-left text-[var(--muted)] border-b border-gray-700 text-sm">
-          <th className="p-2">Şarkı</th>
-          <th className="p-2">Sanatçı</th>
-          <th className="p-2">Dinle</th>
-          <th className="p-2">PlayListe Ekle</th>
-          {canEditOrDelete && <th className="p-2">Düzenle</th>}
-          {canEditOrDelete && <th className="p-2">Sil</th>}
+          <th className="p-3 w-[30%]">Şarkı</th>
+          <th className="p-3 w-[25%]">Sanatçı</th>
+          <th className="p-3 w-[15%]">Dinle</th>
+          <th className="p-3 w-[30%]">İşlemler</th>
         </tr>
       </thead>
 
@@ -55,87 +53,98 @@ const DesktopTableView: React.FC<DesktopTableProps> = ({
         {currentSongs?.map((song) => (
           <tr
             key={song.id || song.title}
-            className="border-b border-gray-800 text-sm"
+            className="border-b border-gray-800 text-sm hover:bg-white/5 transition-colors"
           >
-            <td className="p-2 font-medium truncate min-w-[130px] max-w-[200px]">
-              {song.title}
+            <td className="p-3 font-medium truncate">
+              <span className="block truncate" title={song.title}>
+                {song.title}
+              </span>
             </td>
 
-            <td className="p-2 truncate min-w-[80px] max-w-[120px]">
-              {song.artist}
+            <td className="p-3 truncate text-gray-400">
+              <span className="block truncate" title={song.artist}>
+                {song.artist}
+              </span>
             </td>
 
-            <td className="p-2">
+            <td className="p-3">
               {song.spotifyUrl || song.youtubeUrl ? (
-                <span className="flex items-center gap-2 text-xl">
+                <div className="flex items-center gap-3 text-lg">
                   {song.spotifyUrl && (
-                    <a target="_blank" href={song.spotifyUrl}>
-                      <FontAwesomeIcon
-                        icon={faSpotify}
-                        className="text-[#1DB954] hover:scale-125 transition"
-                      />
+                    <a
+                      target="_blank"
+                      href={song.spotifyUrl}
+                      className="text-[#1DB954] hover:text-[#1ed760] hover:scale-110 transition-all p-1"
+                    >
+                      <FontAwesomeIcon icon={faSpotify} />
                     </a>
                   )}
                   {song.youtubeUrl && (
-                    <a target="_blank" href={song.youtubeUrl}>
-                      <FontAwesomeIcon
-                        icon={faYoutube}
-                        className="text-[#FF0000] hover:scale-125 transition"
-                      />
+                    <a
+                      target="_blank"
+                      href={song.youtubeUrl}
+                      className="text-[#FF0000] hover:text-[#ff3333] hover:scale-110 transition-all p-1"
+                    >
+                      <FontAwesomeIcon icon={faYoutube} />
                     </a>
                   )}
-                </span>
+                </div>
               ) : (
-                <span className="text-xs text-gray-500">yok</span>
+                <span className="text-xs text-gray-500">-</span>
               )}
             </td>
 
-            <td className="p-2">
-              {(profile?.is_spotify_connected && spotifyPlaylists?.length) ||
-              (profile?.is_youtube_connected && youtubePlaylists?.length) ? (
-                <button
-                  className="btn !bg-green-600 hover:!bg-green-500 !px-2 !py-1 text-xs"
-                  onClick={() => {
-                    setSongToAdd(song);
-                    setShowPlaylistModal(true);
-                  }}
-                >
-                  Ekle
-                </button>
-              ) : (
-                <span className="text-gray-500 text-xs">
-                  Eklemek için giriş yapın
-                </span>
-              )}
+            <td className="p-3">
+              <div className="flex items-center gap-2">
+                {(profile?.is_spotify_connected && spotifyPlaylists?.length) ||
+                  (profile?.is_youtube_connected && youtubePlaylists?.length) ? (
+                  <button
+                    className="btn !bg-indigo-600 hover:!bg-indigo-500 !px-3 !py-1.5 text-xs font-medium rounded-lg"
+                    onClick={() => {
+                      setSongToAdd(song);
+                      setShowPlaylistModal(true);
+                    }}
+                  >
+                    Ekle
+                  </button>
+                ) : (
+                  <span className="text-gray-500 text-[10px] italic">
+                    {profile?.is_youtube_connected &&
+                      !youtubePlaylists?.length ? (
+                      "Youtube Playlisti Yok"
+                    ) : profile?.is_spotify_connected &&
+                      !spotifyPlaylists?.length ? (
+                      "Spotify Playlisti Yok"
+                    ) : (
+                      "Giriş Gerekli"
+                    )}
+                  </span>
+                )}
+
+                {canEditOrDelete && (
+                  <>
+                    <button
+                      className="btn !bg-gray-700 hover:!bg-gray-600 !px-2 !py-1.5 text-xs rounded-lg"
+                      onClick={() => {
+                        setShowUpdateForm((prev) => {
+                          const open = !prev;
+                          setEditSong(open ? song : null);
+                          return open;
+                        });
+                      }}
+                    >
+                      Düzenle
+                    </button>
+                    <button
+                      className="btn !bg-rose-900/50 hover:!bg-rose-900 !text-rose-200 !px-2 !py-1.5 text-xs rounded-lg border border-rose-800/50"
+                      onClick={() => song.id && handleDelete(song.id)}
+                    >
+                      Sil
+                    </button>
+                  </>
+                )}
+              </div>
             </td>
-
-            {canEditOrDelete && (
-              <td className="p-2">
-                <button
-                  className="btn !bg-yellow-600 hover:!bg-yellow-500 !px-2 !py-1 text-xs"
-                  onClick={() => {
-                    setShowUpdateForm((prev) => {
-                      const open = !prev;
-                      setEditSong(open ? song : null);
-                      return open;
-                    });
-                  }}
-                >
-                  Düzenle
-                </button>
-              </td>
-            )}
-
-            {canEditOrDelete && (
-              <td className="p-2">
-                <button
-                  className="btn !bg-red-600 hover:!bg-red-500 !px-2 !py-1 text-xs"
-                  onClick={() => song.id && handleDelete(song.id)}
-                >
-                  Sil
-                </button>
-              </td>
-            )}
           </tr>
         ))}
       </tbody>

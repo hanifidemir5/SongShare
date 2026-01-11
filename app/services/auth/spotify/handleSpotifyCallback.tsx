@@ -1,13 +1,18 @@
 import { supabase } from "@/lib/supabaseClient";
+import { saveUserToken } from "@/app/helpers/tokenManager";
 
 export async function handleSpotifyCallback(authUser: {
   id: string;
   email: string | null;
   user_metadata?: any;
   spotifyId: string | null;
-  spotifyAccessToken: string | null | undefined;
-  spotifyRefreshToken: string | null | undefined;
+  spotifyAccessToken: string | null; // Removed | undefined to match strict types if needed, or keep it.
+  spotifyRefreshToken: string | null;
 }) {
+  // Save Token to DB
+  if (authUser.spotifyAccessToken) {
+    await saveUserToken(authUser.id, "spotify", authUser.spotifyAccessToken, authUser.spotifyRefreshToken);
+  }
   const spotifyId = authUser.user_metadata?.provider_id ?? null;
   const displayName =
     authUser.user_metadata?.name ?? authUser.email ?? "Unknown";

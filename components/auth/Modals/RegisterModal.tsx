@@ -24,13 +24,7 @@ export default function RegisterModal({
       alert("Please fill in all fields.");
       return;
     }
-    console.log(
-      cleanEmail,
-      "url /n",
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      "anon: /n",
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-    );
+
     const { data, error } = await supabase.auth.signUp({
       email: cleanEmail,
       password,

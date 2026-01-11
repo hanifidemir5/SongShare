@@ -4,44 +4,89 @@ import { useState } from "react";
 import SpotifyConnectButton from "./SpotifyConnectButton";
 import { useAuth } from "@/app/contexts/AuthContext";
 import YouTubeConnectButton from "./YoutubeConnectButton";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faChevronDown, faUser } from "@fortawesome/free-solid-svg-icons";
 
 export default function LoginButtons() {
   const [isOpen, setIsOpen] = useState(false);
   const { loading, isLoggedIn, logout, profile } = useAuth();
 
-  // Yükleme sırasında basit bir yazı veya spinner
-  if (loading) return <div className="text-white">...</div>;
+  if (loading) return <div className="text-white text-xs animate-pulse">Yükleniyor...</div>;
 
   return (
-    <div className="relative inline-block text-left">
-      {/* Ana Buton: Giriş yapılmışsa isim, yapılmamışsa genel başlık */}
+    <div className="relative inline-block text-left z-50">
       <button
         onClick={() => setIsOpen((prev) => !prev)}
-        className="btn w-48 text-white px-6 py-2 rounded-lg shadow-md bg-indigo-600 hover:bg-indigo-700 transition-colors"
+        className={`btn flex items-center gap-3 px-4 py-2 rounded-xl border transition-all duration-300 ${isLoggedIn
+          ? "bg-indigo-600/10 border-indigo-500/50 text-indigo-300 hover:bg-indigo-600/20"
+          : "bg-gray-800 border-white/10 text-white hover:bg-gray-700"
+          }`}
       >
-        {isLoggedIn ? profile?.name || "Hesabım" : "Giriş Yap / Bağlan"}
+        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${isLoggedIn ? "bg-indigo-600 text-white" : "bg-white/10 text-gray-400"
+          }`}>
+          <FontAwesomeIcon icon={faUser} className="text-sm" />
+        </div>
+
+        <div className="flex flex-col items-start min-w-[100px]">
+          <span className="text-[10px] uppercase tracking-wider opacity-60 font-semibold">
+            {isLoggedIn ? "Hesabım" : "Misafir"}
+          </span>
+          <span className="text-sm font-medium">
+            {isLoggedIn ? (profile?.name || "Kullanıcı") : "Giriş Yap"}
+          </span>
+        </div>
+
+        <FontAwesomeIcon
+          icon={faChevronDown}
+          className={`text-xs opacity-50 transition-transform duration-300 ${isOpen ? "rotate-180" : ""}`}
+        />
       </button>
 
-      {/* Dropdown Menü */}
       {isOpen && (
-        <div
-          className="absolute right-0 mt-2 w-64 origin-top-right rounded-xl bg-[rgb(79_70_229/1)] shadow-lg ring-1 ring-black/10 z-50 p-2"
-          onMouseLeave={() => setIsOpen(false)}
-        >
-          <div className="flex flex-col gap-2">
-            {/* 1. KISIM: PLATFORM BUTONLARI (Her zaman görünür) */}
-            {/* Bu butonlar kendi içlerinde "Bağlan" veya "Bağlantıyı Kes" durumunu yönetir */}
-            <SpotifyConnectButton />
-            <YouTubeConnectButton />
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
+          <div
+            className="absolute right-0 mt-3 w-72 origin-top-right rounded-xl bg-gray-900/95 backdrop-blur-xl border border-white/10 shadow-2xl p-3 z-50 animate-in fade-in zoom-in-95 duration-200"
+          >
+            {!isLoggedIn ? (
+              <div className="space-y-3">
+                <div className="px-1">
+                  <h3 className="text-sm font-medium text-white">Hoş Geldiniz</h3>
+                  <p className="text-xs text-gray-400 mt-0.5">Devam etmek için bir platform seçin</p>
+                </div>
 
-            {/* 2. KISIM: ÇIKIŞ BUTONU (Sadece giriş yapılmışsa görünür) */}
-            {isLoggedIn && (
-              <>
-                {/* Ayırıcı Çizgi */}
-                <div className="border-t border-indigo-400/30 my-1"></div>
+                <div className="space-y-2">
+                  {/* Reuse components but wrapper them for consistent width/style if needed, 
+                        or user 'SpotifyConnectButton' directly if it looks good. 
+                        Based on previous file read, they have their own styles. 
+                        Let's wrap them in a simple div for spacing.
+                    */}
+                  <div className="transform transition-transform active:scale-95">
+                    <SpotifyConnectButton />
+                  </div>
+                  <div className="transform transition-transform active:scale-95">
+                    <YouTubeConnectButton />
+                  </div>
+                </div>
+
+                <p className="text-[10px] text-center text-gray-500 pt-2">
+                  Giriş yaparak kullanım koşullarını kabul etmiş olursunuz.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-1">
+                <p className="text-xs font-semibold text-gray-400 px-2 py-1 uppercase tracking-wider">
+                  Bağlı Hesaplar
+                </p>
+                <div className="space-y-2 mb-3">
+                  <SpotifyConnectButton />
+                  <YouTubeConnectButton />
+                </div>
+
+                <div className="h-px bg-white/10 my-2" />
 
                 <button
-                  className="w-full text-left px-3 py-2 rounded-md text-white hover:bg-red-500 transition-colors text-sm font-medium"
+                  className="w-full text-left px-3 py-2.5 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors text-sm font-medium flex items-center gap-2"
                   onClick={() => {
                     logout();
                     setIsOpen(false);
@@ -49,10 +94,10 @@ export default function LoginButtons() {
                 >
                   Çıkış Yap
                 </button>
-              </>
+              </div>
             )}
           </div>
-        </div>
+        </>
       )}
     </div>
   );

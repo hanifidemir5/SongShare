@@ -1,10 +1,15 @@
 import { supabase } from "@/lib/supabaseClient";
+import { saveUserToken } from "@/app/helpers/tokenManager";
 
 export async function handleYouTubeCallback(authUser: {
   id: string;
   email: string | null;
   user_metadata?: any;
+  accessToken: string;
+  refreshToken?: string | null;
 }) {
+  // Save Token to DB
+  await saveUserToken(authUser.id, "youtube", authUser.accessToken, authUser.refreshToken);
   const youtubeId =
     authUser.user_metadata?.sub ?? authUser.user_metadata?.provider_id ?? null;
 

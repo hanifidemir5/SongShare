@@ -35,7 +35,8 @@ export const SongsProvider = ({ children }: Props) => {
   const fetchProfiles = async () => {
     const { data, error } = await supabase.from("profiles").select("*");
     if (error) {
-      console.error("Error fetching users:", error);
+      console.error("CRITICAL: Error fetching profiles from Supabase:", error);
+      console.error("Supabase URL:", process.env.NEXT_PUBLIC_SUPABASE_URL); // Debug config
       return;
     }
     setProfileList(data ?? []);

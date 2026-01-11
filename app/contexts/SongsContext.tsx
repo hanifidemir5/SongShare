@@ -8,11 +8,17 @@ interface SongsContextValue {
   recommendedSongs: Song[];
   favoriteSongs: Song[];
   recentlyPlayed: Song[];
+  topTracks: Song[];
+  globalTopTracks: Song[];
+  groupSongs: Song[];
   isLoading: boolean;
   currentProfile: Profile | null;
   setCurrentProfile: (profile: Profile) => void;
   profileList: Profile[];
   refetchSongs: () => void;
+  createGroup: (name: string) => Promise<void>;
+  joinGroup: (code: string) => Promise<void>;
+  leaveGroup: () => Promise<void>;
 }
 
 const SongsContext = createContext<SongsContextValue | undefined>(undefined);
@@ -32,6 +38,9 @@ export const SongsProvider = ({ children }: Props) => {
     null
   );
   const [recentlyPlayed, setRecentlyPlayed] = React.useState<Song[]>([]);
+  const [topTracks, setTopTracks] = React.useState<Song[]>([]);
+  const [globalTopTracks, setGlobalTopTracks] = React.useState<Song[]>([]);
+  const [groupSongs, setGroupSongs] = React.useState<Song[]>([]);
 
   // Fetch all users once on mount
   const fetchProfiles = async () => {
@@ -60,6 +69,120 @@ export const SongsProvider = ({ children }: Props) => {
     if (error) throw error;
     return data ?? [];
   };
+
+  // Fetch Group Songs
+  const fetchGroupSongs = async () => {
+    if (!currentProfile?.group_id) {
+      setGroupSongs([]);
+      return;
+    }
+
+    try {
+      // 1. Get all member IDs of the group
+      const { data: members, error: memberError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('group_id', currentProfile.group_id);
+
+      if (memberError) throw memberError;
+
+      const memberIds = members.map(m => m.id);
+
+      // 2. Fetch songs added by these members
+      const { data: songs, error: songError } = await supabase
+        .from('Song')
+        .select('*')
+        .in('addedBy', memberIds)
+        .order('created_at', { ascending: false });
+
+      if (songError) throw songError;
+
+      setGroupSongs(songs || []);
+
+    } catch (error) {
+      console.error("Error fetching group songs:", error);
+    }
+  };
+
+  // Group Actions
+  const createGroup = async (name: string) => {
+    if (!currentProfile) return;
+    const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+
+    const { data: group, error } = await supabase
+      .from('groups')
+      .insert({ name, code, created_by: currentProfile.id })
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Error creating group:", error);
+      alert("Grup oluşturulurken hata oluştu!");
+      return;
+    }
+
+    await joinGroup(code); // Update profile to join the new group
+  };
+
+  const joinGroup = async (codeOrId: string) => {
+    if (!currentProfile) return;
+
+    // Detect if input is a UUID or a 6-char code
+    const isUUID = codeOrId.length > 10 && codeOrId.includes('-');
+
+    // 1. Find group
+    let query = supabase.from('groups').select('id');
+    if (isUUID) {
+      query = query.eq('id', codeOrId);
+    } else {
+      query = query.eq('code', codeOrId.toUpperCase());
+    }
+
+    const { data: group, error: findError } = await query.single();
+
+    if (findError || !group) {
+      console.error("Group find error:", findError);
+      alert("Grup bulunamadı! Kod veya ID hatalı olabilir.");
+      return;
+    }
+
+    // 2. Update Profile
+    const { error: updateError } = await supabase
+      .from('profiles')
+      .update({
+        group_id: group.id,
+        group_role: 'member' // Default role
+      })
+      .eq('id', currentProfile.id);
+
+    if (updateError) {
+      console.error("Error joining group:", updateError);
+      return;
+    }
+
+    // Refresh
+    await fetchProfiles();
+    // Wait a bit for profile update then fetch songs
+    setTimeout(fetchGroupSongs, 500);
+  };
+
+  const leaveGroup = async () => {
+    if (!currentProfile) return;
+
+    const { error } = await supabase
+      .from('profiles')
+      .update({ group_id: null, group_role: null })
+      .eq('id', currentProfile.id);
+
+    if (error) {
+      console.error("Error leaving group:", error);
+      return;
+    }
+
+    await fetchProfiles();
+    setGroupSongs([]);
+  };
+
 
   // Fetch Spotify History
   const fetchSpotifyHistory = async () => {
@@ -100,6 +223,47 @@ export const SongsProvider = ({ children }: Props) => {
     }
   };
 
+  // Fetch Global Spotify Top Tracks (works for all users including guests)
+  const fetchSpotifyTopTracks = async () => {
+    try {
+      const response = await fetch("/api/spotify/top-tracks");
+
+      if (!response.ok) {
+        console.warn("Failed to fetch top tracks");
+        return;
+      }
+
+      const data = await response.json();
+
+      // Turkey Top 20
+      const turkeyTracks = (data.turkeyTracks || []).map((track: any) => ({
+        id: track.id,
+        title: track.title,
+        artist: track.artist,
+        spotifyUrl: track.spotifyUrl,
+        addedBy: "spotify-turkey",
+        category: "topTracks",
+        created_at: new Date().toISOString()
+      }));
+      setTopTracks(turkeyTracks);
+
+      // Global Top 20
+      const globalTracks = (data.globalTracks || []).map((track: any) => ({
+        id: track.id,
+        title: track.title,
+        artist: track.artist,
+        spotifyUrl: track.spotifyUrl,
+        addedBy: "spotify-global",
+        category: "globalTopTracks",
+        created_at: new Date().toISOString()
+      }));
+      setGlobalTopTracks(globalTracks);
+
+    } catch (error) {
+      console.error("Error fetching top tracks:", error);
+    }
+  };
+
   // Add this inside SongsProvider, under fetchProfiles effect
   React.useEffect(() => {
     const { data: listener } = supabase.auth.onAuthStateChange(
@@ -133,10 +297,16 @@ export const SongsProvider = ({ children }: Props) => {
     enabled: !!currentProfile, // only fetch if currentUser exists
   });
 
-  // Trigger history fetch when profile changes
+  // Trigger history and Group fetches when profile changes
   React.useEffect(() => {
     fetchSpotifyHistory();
+    fetchGroupSongs();
   }, [currentProfile]);
+
+  // Fetch global top tracks on mount (for all users including guests)
+  React.useEffect(() => {
+    fetchSpotifyTopTracks();
+  }, []);
 
   const recommendedSongs = songs
     .filter((s) => s.category === "recommended")
@@ -159,11 +329,17 @@ export const SongsProvider = ({ children }: Props) => {
         recommendedSongs,
         favoriteSongs,
         recentlyPlayed,
+        topTracks,
+        globalTopTracks,
+        groupSongs,
         isLoading,
         currentProfile,
         setCurrentProfile,
         profileList,
         refetchSongs,
+        createGroup,
+        joinGroup,
+        leaveGroup
       }}
     >
       {children}

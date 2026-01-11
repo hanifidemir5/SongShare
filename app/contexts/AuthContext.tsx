@@ -140,6 +140,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         "playlist-modify-public",
         "playlist-read-collaborative",
         "user-read-recently-played",
+        "user-top-read",
       ].join(" "),
       queryParams: {
         show_dialog: "true",

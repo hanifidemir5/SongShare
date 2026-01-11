@@ -1,6 +1,7 @@
 import { getSpotifyIdFromYouTubeUrl } from "./getSpotifyIdFromYouTubeUrl";
 import { getYouTubeIdFromSpotifyUrl } from "./getYouTubeUrlFromSpotify";
 import { getSpotifyAccessToken } from "./spotifyTokenManager";
+import { formatDuration } from "./formatDuration";
 
 export async function getSongInfo(url: string) {
   try {
@@ -15,19 +16,31 @@ export async function getSongInfo(url: string) {
       if (!videoId) throw new Error("Geçersiz YouTube URL");
 
       const apiKey = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY; // kendi API key'in
+      // Updated to fetch contentDetails for duration
       const response = await fetch(
-        `https://www.googleapis.com/youtube/v3/videos?part=snippet&id=${videoId}&key=${apiKey}`
+        `https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&id=${videoId}&key=${apiKey}`
       );
       const data = await response.json();
 
       if (!data.items?.length) throw new Error("Video bulunamadı");
 
-      const title = data.items[0].snippet.title;
-      const channel = data.items[0].snippet.channelTitle;
-      const spotifyTrackId = await getSpotifyIdFromYouTubeUrl(url,process.env.NEXT_PUBLIC_YOUTUBE_API_KEY,spotifyAccessToken);
+      const snippet = data.items[0].snippet;
+      const contentDetails = data.items[0].contentDetails;
+
+      const title = snippet.title;
+      const channel = snippet.channelTitle;
+      const duration = formatDuration(contentDetails.duration);
+
+      const spotifyTrackId = await getSpotifyIdFromYouTubeUrl(url, process.env.NEXT_PUBLIC_YOUTUBE_API_KEY, spotifyAccessToken);
       const spotifyUrl = `https://open.spotify.com/track/${spotifyTrackId}`;
-      
-      return {  title, artist: channel,youtubeUrl:url,spotifyUrl };
+
+      return {
+        title,
+        artist: channel,
+        youtubeUrl: url,
+        spotifyUrl,
+        duration
+      };
     }
 
     if (isSpotify) {
@@ -40,14 +53,15 @@ export async function getSongInfo(url: string) {
         headers: { Authorization: `Bearer ${spotifyAccessToken}` },
       });
       const data = await response.json();
-      const youtubeVideoId = await getYouTubeIdFromSpotifyUrl(url,spotifyAccessToken,process.env.NEXT_PUBLIC_YOUTUBE_API_KEY);
+      const youtubeVideoId = await getYouTubeIdFromSpotifyUrl(url, spotifyAccessToken, process.env.NEXT_PUBLIC_YOUTUBE_API_KEY);
       const youtubeUrl = `https://www.youtube.com/watch?v=${youtubeVideoId}`;
-      
+
       return {
         title: data.name,
         artist: data.artists.map((a: any) => a.name).join(", "),
-        youtubeUrl:youtubeUrl,
-        spotifyUrl:url,
+        youtubeUrl: youtubeUrl,
+        spotifyUrl: url,
+        duration: formatDuration(data.duration_ms)
       };
     }
 

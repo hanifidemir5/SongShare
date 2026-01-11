@@ -3,14 +3,14 @@ import { Profile } from "@/app/types";
 import { useState } from "react";
 import { faArrowUp, faArrowDown } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import LoginModal from "./auth/Modals/LoginModal";
-import RegisterModal from "./auth/Modals/RegisterModal";
+
 
 type Props = {
   onSearch: (q: string) => void;
   profileList: Profile[];
   currentProfile: Profile | null | undefined;
   setCurrentProfile: (profile: Profile) => void;
+  user: any;
 };
 
 export default function Header({
@@ -18,10 +18,9 @@ export default function Header({
   currentProfile,
   profileList,
   setCurrentProfile,
+  user,
 }: Props) {
   const [isOpen, setIsOpen] = useState(false);
-  const [isLoginOpen, setIsLoginOpen] = useState(false);
-  const [isRegisterOpen, setIsRegisterOpen] = useState(false);
 
   const handleSelect = (profile: Profile) => {
     setCurrentProfile(profile);
@@ -41,51 +40,81 @@ export default function Header({
         <p className="text-sm text-[var(--muted)]">
           Paylaş, keşfet ve sıradaki favorini bul ✨
         </p>
+        <div className="mt-2 text-xs">
+          {!user ? (
+            <span className="bg-orange-500/20 text-orange-400 px-2 py-1 rounded">
+              Misafir Modu (Giriş Yapılmadı)
+            </span>
+          ) : user.id === currentProfile?.id ? (
+            <span className="bg-green-500/20 text-green-400 px-2 py-1 rounded">
+              Kendi Profilin
+            </span>
+          ) : (
+            <span className="bg-blue-500/20 text-blue-400 px-2 py-1 rounded">
+              Başkasının Profilini İnteliyorsun
+            </span>
+          )}
+        </div>
       </div>
       <input
         className="input md:w-80"
         placeholder="Ara: başlık / sanatçı / etiket"
         onChange={(e) => onSearch(e.target.value)}
       />
-      <LoginButtons
-        onOpenLogin={() => setIsLoginOpen(true)}
-        onOpenRegister={() => setIsRegisterOpen(true)}
-      />
-      <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} />
-      <RegisterModal
-        isOpen={isRegisterOpen}
-        onClose={() => setIsRegisterOpen(false)}
-      />
-      <div className="relative inline-block text-left ">
+      <LoginButtons />
+      <div className="relative inline-block text-left z-40">
         <button
           onClick={() => setIsOpen((prev) => !prev)}
-          className="btn hover:!bg-none !px-4  text-sm flex items-center gap-2 "
+          className="btn !bg-gray-800 hover:!bg-gray-700 text-white !px-4 py-2 text-sm flex items-center gap-3 rounded-xl border border-white/5 transition-all duration-200"
         >
-          <span>{currentProfile ? currentProfile.name : "Select User"}</span>
-          <span className="hover:bg-[rgb(79_70_229/1)] transition-colors duration-300 delay-150 px-2 py-1 rounded">
-            {isOpen ? (
-              <FontAwesomeIcon icon={faArrowUp} className="w-4 h-4" />
-            ) : (
-              <FontAwesomeIcon icon={faArrowDown} className="w-4 h-4" />
-            )}
+          <div className="flex flex-col items-start">
+            <span className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">
+              Görüntülenen
+            </span>
+            <span className="font-medium">
+              {currentProfile ? currentProfile.name : "Seçiniz"}
+            </span>
+          </div>
+          <span className={`transition-transform duration-300 ${isOpen ? "rotate-180" : ""}`}>
+            <FontAwesomeIcon icon={faArrowDown} className="w-3 h-3 text-indigo-400" />
           </span>
         </button>
 
         {isOpen && (
-          <ul className="absolute right-0 mt-1 origin-top-right rounded-md shadow-lg bg-[rgb(79_70_229/1)] w-full ring-1 bg-white ring-black/10 divide-y divide-gray-100 z-50">
-            {otherProfiles.map((Profile) => (
-              <li key={Profile.id}>
-                <button
-                  onClick={() => handleSelect(Profile)}
-                  className={`hover:bg-[rgb(99_102_241/1)] text-left px-3 py-2 text-white bg-[rgb(79_70_229/1)] rounded-md w-full  ${
-                    Profile.id === currentProfile?.id ? "font-medium" : ""
-                  }`}
-                >
-                  {Profile.name}
-                </button>
-              </li>
-            ))}
-          </ul>
+          <>
+            <div
+              className="fixed inset-0 z-40"
+              onClick={() => setIsOpen(false)}
+            />
+            <div className="absolute right-0 mt-2 w-64 origin-top-right rounded-xl bg-gray-900/95 backdrop-blur-xl border border-white/10 shadow-2xl py-2 z-50 animate-in fade-in zoom-in-95 duration-200">
+              <div className="px-4 py-2 border-b border-white/5 mb-2">
+                <p className="text-xs text-indigo-400 font-semibold uppercase tracking-wider">
+                  Profil Seç
+                </p>
+                <p className="text-[10px] text-gray-500 mt-0.5">
+                  Başka bir kullanıcının listelerini görüntüle
+                </p>
+              </div>
+
+              <div className="max-h-64 overflow-y-auto custom-scrollbar px-2 space-y-1">
+                {profileList.map((Profile) => (
+                  <button
+                    key={Profile.id}
+                    onClick={() => handleSelect(Profile)}
+                    className={`w-full text-left px-3 py-2.5 rounded-lg text-sm transition-all duration-200 flex items-center justify-between group ${Profile.id === currentProfile?.id
+                      ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/20"
+                      : "text-gray-400 hover:bg-white/5 hover:text-white"
+                      }`}
+                  >
+                    <span className="font-medium">{Profile.name}</span>
+                    {Profile.id === currentProfile?.id && (
+                      <div className="w-2 h-2 rounded-full bg-white animate-pulse" />
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </>
         )}
       </div>
     </header>

@@ -2,7 +2,6 @@ import { supabase } from "@/lib/supabaseClient";
 
 const CLIENT_ID = process.env.NEXT_PUBLIC_YOUTUBE_CLIENT_ID!;
 // const REDIRECT_URI = "https://songshareforlove.netlify.app";
-const REDIRECT_URI = "http://localhost:300/services/auth/youtube/callback";
 const AUTH_ENDPOINT = "https://accounts.google.com/o/oauth2/v2/auth";
 const RESPONSE_TYPE = "token";
 
@@ -12,6 +11,10 @@ const SCOPES = [
 ];
 
 export function loginWithYouTube() {
+  const REDIRECT_URI = typeof window !== 'undefined'
+    ? `${window.location.origin}/services/auth/youtube/callback`
+    : "https://songshareforlove.netlify.app/services/auth/youtube/callback";
+
   const state = "youtube"; // unique identifier
   const authUrl = `${AUTH_ENDPOINT}?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(
     REDIRECT_URI

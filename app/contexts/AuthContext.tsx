@@ -132,7 +132,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     );
 
     const options = {
-      redirectTo: "http://localhost:3000/services/auth/spotify/callback",
+      redirectTo: `${window.location.origin}/services/auth/spotify/callback`,
       scopes: [
         "user-read-email",
         "playlist-read-private",
@@ -232,7 +232,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   async function connectYouTube() {
     const options = {
-      redirectTo: "http://localhost:3000/services/auth/youtube/callback",
+      redirectTo: `${window.location.origin}/services/auth/youtube/callback`,
       queryParams: {
         access_type: "offline",
         prompt: "consent",

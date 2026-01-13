@@ -15,6 +15,7 @@ export default function HomePage() {
   const {
     recommendedSongs,
     favoriteSongs,
+    myPlaylistSongs,
     recentlyPlayed,
     topTracks,
     globalTopTracks,
@@ -93,6 +94,7 @@ export default function HomePage() {
       <PlaylistTabs
         recommendedSongs={recommendedSongs}
         favoriteSongs={favoriteSongs}
+        myPlaylistSongs={myPlaylistSongs}
         recentlyPlayed={recentlyPlayed}
         topTracks={topTracks}
         globalTopTracks={globalTopTracks}

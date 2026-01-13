@@ -16,7 +16,7 @@ function AddSong() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [url, setUrl] = useState<string>("");
-  const [category, setCategory] = useState<"recommended" | "favorites">("recommended");
+  const [category, setCategory] = useState<"recommended" | "favorites" | "myPlaylist">("recommended");
 
   const [isLoading, setIsLoading] = useState(false);
 
@@ -175,11 +175,12 @@ function AddSong() {
                 className="input w-full"
                 value={category}
                 onChange={(e) =>
-                  setCategory(e.target.value as "recommended" | "favorites")
+                  setCategory(e.target.value as "recommended" | "favorites" | "myPlaylist")
                 }
               >
                 <option value="recommended">Şu sıralar dinlediklerim</option>
                 <option value="favorites">Tüm zamanlar favorilerim</option>
+                <option value="myPlaylist">Benim Playlistim</option>
               </select>
 
               <div className="flex gap-2 justify-end">

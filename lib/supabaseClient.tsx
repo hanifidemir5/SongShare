@@ -7,9 +7,6 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error(
     "Supabase URL veya Key bulunamadı! .env dosyasını kontrol et."
   );
-} else {
-  console.log(process.env.NEXT_PUBLIC_SUPABASE_URL);
-  console.log(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 }
 
 // İşte API Key buraya girilmeli. Buraya girdikten sonra

@@ -2,7 +2,7 @@
 
 import { useSearchParams, useRouter } from "next/navigation";
 import { toast } from "react-toastify";
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import Header from "@/components/Header";
 import PlaylistTabs from "@/components/layout/PlaylistTabs";
 import AddSong from "@/components/operaitons/AddSong";
@@ -11,25 +11,10 @@ import { useAuth } from "./contexts/AuthContext";
 
 import GroupManagement from "@/components/GroupManagement";
 
-export default function HomePage() {
-  const {
-    recommendedSongs,
-    favoriteSongs,
-    myPlaylistSongs,
-    recentlyPlayed,
-    topTracks,
-    globalTopTracks,
-    groupSongs,
-    profileList,
-    currentProfile,
-    setCurrentProfile,
-  } = useSongs();
-  const { user } = useAuth();
-
+// Separate component to handle search params inside Suspense
+function SearchParamsHandler() {
   const searchParams = useSearchParams();
   const router = useRouter();
-
-  const [showGroupModal, setShowGroupModal] = useState(false);
 
   useEffect(() => {
     const error = searchParams.get("error");
@@ -48,8 +33,33 @@ export default function HomePage() {
     }
   }, [searchParams, router]);
 
+  return null;
+}
+
+export default function HomePage() {
+  const {
+    recommendedSongs,
+    favoriteSongs,
+    myPlaylistSongs,
+    recentlyPlayed,
+    topTracks,
+    globalTopTracks,
+    groupSongs,
+    profileList,
+    currentProfile,
+    setCurrentProfile,
+  } = useSongs();
+  const { user } = useAuth();
+
+  const [showGroupModal, setShowGroupModal] = useState(false);
+
   return (
     <main className="container py-8 space-y-8">
+      {/* Suspense boundary required for useSearchParams during static export */}
+      <Suspense fallback={null}>
+        <SearchParamsHandler />
+      </Suspense>
+
       <Header
         profileList={profileList}
         onSearch={() => { }}

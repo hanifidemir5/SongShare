@@ -4,7 +4,7 @@ import { useState } from "react";
 import SongTable from "./SongTable/SongTable";
 import { Song } from "@/app/types";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faHeadphones, faStar, faHistory, faChartLine, faGlobe, faListUl, faTrash, faExclamationTriangle } from "@fortawesome/free-solid-svg-icons";
+import { faHeadphones, faStar, faHistory, faChartLine, faGlobe, faListUl, faTrash, faExclamationTriangle, faChevronDown } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "@/app/contexts/AuthContext";
 import { useSongs } from "@/app/contexts/SongsContext";
 import { supabase } from "@/lib/supabaseClient";
@@ -64,7 +64,39 @@ export default function PlaylistTabs({ recommendedSongs, favoriteSongs, myPlayli
     return (
         <div className="space-y-6">
             {/* Tab Navigation */}
-            <div className="flex flex-wrap gap-2 p-1 bg-gray-900/50 backdrop-blur-sm rounded-xl border border-white/5 w-fit">
+            {/* Mobile Navigation (Dropdown) */}
+            <div className="md:hidden w-full relative z-10 mb-4">
+                <select
+                    value={activeTab}
+                    onChange={(e) => setActiveTab(e.target.value as any)}
+                    className="w-full bg-gray-900/50 backdrop-blur-sm border border-white/10 text-white rounded-xl px-4 py-3 appearance-none focus:outline-none focus:border-indigo-500 font-medium transition-all"
+                >
+                    {isLoggedIn && (
+                        <>
+                            <option value="recommended">Şu Sıralar Dinlediklerim</option>
+                            <option value="favorites">Favoriler</option>
+                            {myPlaylistSongs && myPlaylistSongs.length > 0 && (
+                                <option value="myPlaylist">Benim Playlistim ({myPlaylistSongs?.length})</option>
+                            )}
+                            {recentlyPlayed.length > 0 && (
+                                <option value="history">Son Çalınanlar</option>
+                            )}
+                        </>
+                    )}
+                    {topTracks && topTracks.length > 0 && (
+                        <option value="topTracks">Türkiye Top 20</option>
+                    )}
+                    {globalTopTracks && globalTopTracks.length > 0 && (
+                        <option value="globalTop">Global Top 20</option>
+                    )}
+                </select>
+                <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
+                    <FontAwesomeIcon icon={faChevronDown} />
+                </div>
+            </div>
+
+            {/* Tab Navigation (Desktop) */}
+            <div className="hidden md:flex flex-wrap gap-2 p-1 bg-gray-900/50 backdrop-blur-sm rounded-xl border border-white/5 w-fit">
 
                 {/* Only show these tabs for logged in users */}
                 {isLoggedIn && (

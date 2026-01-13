@@ -29,7 +29,6 @@ const PlaylistModal: React.FC<PlaylistModalProps> = ({
   youtubePlaylists,
   onClose,
 }) => {
-  // All hooks MUST be called before any early returns
   const [selectedPlatform, setSelectedPlatform] = useState<string | null>(null);
   const [selectedPlaylist, setSelectedPlaylist] = useState<string | null>(null);
   const { profile } = useAuth();

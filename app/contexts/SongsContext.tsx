@@ -7,6 +7,7 @@ import { Song, Profile } from "../types";
 interface SongsContextValue {
   recommendedSongs: Song[];
   favoriteSongs: Song[];
+  myPlaylistSongs: Song[];
   recentlyPlayed: Song[];
   topTracks: Song[];
   globalTopTracks: Song[];
@@ -322,12 +323,20 @@ export const SongsProvider = ({ children }: Props) => {
         new Date(b.created_at ?? 0).getTime() -
         new Date(a.created_at ?? 0).getTime()
     );
+  const myPlaylistSongs = songs
+    .filter((s) => s.category === "myPlaylist")
+    .sort(
+      (a, b) =>
+        new Date(b.created_at ?? 0).getTime() -
+        new Date(a.created_at ?? 0).getTime()
+    );
 
   return (
     <SongsContext.Provider
       value={{
         recommendedSongs,
         favoriteSongs,
+        myPlaylistSongs,
         recentlyPlayed,
         topTracks,
         globalTopTracks,

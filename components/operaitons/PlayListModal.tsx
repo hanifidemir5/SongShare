@@ -29,10 +29,12 @@ const PlaylistModal: React.FC<PlaylistModalProps> = ({
   youtubePlaylists,
   onClose,
 }) => {
-  if (!show || !song) return null;
+  // All hooks MUST be called before any early returns
   const [selectedPlatform, setSelectedPlatform] = useState<string | null>(null);
   const [selectedPlaylist, setSelectedPlaylist] = useState<string | null>(null);
   const { profile } = useAuth();
+
+  if (!show || !song) return null;
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">

@@ -2,10 +2,25 @@
 import React from "react";
 import { usePlayer } from "@/app/contexts/PlayerContext";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faTimes, faCompress, faExpand } from "@fortawesome/free-solid-svg-icons";
+import { faTimes, faCompress, faExpand, faStepForward, faStepBackward } from "@fortawesome/free-solid-svg-icons";
 
 const SidebarPlayer = () => {
-    const { videoId, platform, isPlaying, isMinimized, close, toggleMinimize } = usePlayer();
+    const {
+        videoId,
+        platform,
+        isPlaying,
+        isMinimized,
+        close,
+        toggleMinimize,
+        playNext,
+        playPrevious,
+        hasNext,
+        hasPrevious,
+        currentTitle,
+        currentArtist,
+        currentIndex,
+        playlist
+    } = usePlayer();
 
     // Draggable Logic
     const [position, setPosition] = React.useState<{ x: number, y: number } | null>(null);
@@ -101,14 +116,16 @@ const SidebarPlayer = () => {
         }
         : {};
 
+    const showControls = hasNext || hasPrevious;
+
     return (
         <div
             ref={playerRef}
             style={style}
             className={`fixed z-[100] transition-shadow duration-300 shadow-2xl overflow-hidden bg-black border border-white/10 ${!position ? (isMinimized ? "bottom-4 right-4" : "bottom-4 right-4") : ""
                 } ${isMinimized
-                    ? "w-64 h-16 rounded-lg flex items-center"
-                    : "w-80 h-[154px] md:w-96 aspect-video rounded-xl"
+                    ? "w-72 h-14 rounded-lg flex items-center"
+                    : "w-72 md:w-80 rounded-xl"
                 }`}
         >
             {/* Controls Overlay & Drag Handle */}
@@ -138,12 +155,19 @@ const SidebarPlayer = () => {
             {/* Minimized Content Info */}
             {isMinimized && (
                 <div className="flex-1 px-3 text-xs font-medium text-white/90 truncate mr-16 cursor-pointer select-none" onClick={toggleMinimize}>
-                    {platform === 'youtube' ? 'YouTube' : 'Spotify'} oynatılıyor...
+                    {currentTitle ? (
+                        <div className="flex flex-col">
+                            <span className="truncate font-semibold">{currentTitle}</span>
+                            {currentArtist && <span className="truncate text-white/60 text-[10px]">{currentArtist}</span>}
+                        </div>
+                    ) : (
+                        <span>{platform === 'youtube' ? 'YouTube' : 'Spotify'} oynatılıyor...</span>
+                    )}
                 </div>
             )}
 
             {/* Player Frame */}
-            <div className={` w-full h-full bg-black ${isMinimized ? "opacity-0 pointer-events-none absolute" : "opacity-100"}`}>
+            <div className={`w-full bg-black ${isMinimized ? "opacity-0 pointer-events-none absolute h-full" : "opacity-100 h-[152px]"}`}>
                 {platform === "youtube" ? (
                     <iframe
                         width="100%"
@@ -167,6 +191,50 @@ const SidebarPlayer = () => {
                     />
                 )}
             </div>
+
+            {/* Next/Previous Controls - Only shown when playlist exists */}
+            {showControls && !isMinimized && (
+                <div className="flex items-center justify-between px-3 py-2 bg-gradient-to-t from-black/90 to-black/50 border-t border-white/5">
+                    {/* Song Info */}
+                    <div className="flex-1 min-w-0 pr-3">
+                        {currentTitle && (
+                            <div className="flex flex-col">
+                                <span className="text-xs font-semibold text-white truncate">{currentTitle}</span>
+                                {currentArtist && <span className="text-[10px] text-white/60 truncate">{currentArtist}</span>}
+                            </div>
+                        )}
+                        {playlist.length > 0 && (
+                            <span className="text-[10px] text-white/40">{currentIndex + 1} / {playlist.length}</span>
+                        )}
+                    </div>
+
+                    {/* Navigation Buttons */}
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={playPrevious}
+                            disabled={!hasPrevious}
+                            className={`w-9 h-9 flex items-center justify-center rounded-full transition-all ${hasPrevious
+                                ? "bg-white/10 hover:bg-white/20 text-white cursor-pointer"
+                                : "bg-white/5 text-white/30 cursor-not-allowed"
+                                }`}
+                            title="Önceki"
+                        >
+                            <FontAwesomeIcon icon={faStepBackward} className="w-3 h-3" />
+                        </button>
+                        <button
+                            onClick={playNext}
+                            disabled={!hasNext}
+                            className={`w-9 h-9 flex items-center justify-center rounded-full transition-all ${hasNext
+                                ? "bg-indigo-600 hover:bg-indigo-500 text-white cursor-pointer"
+                                : "bg-white/5 text-white/30 cursor-not-allowed"
+                                }`}
+                            title="Sonraki"
+                        >
+                            <FontAwesomeIcon icon={faStepForward} className="w-3 h-3" />
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

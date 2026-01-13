@@ -12,6 +12,7 @@ type Playlist = {
 
 interface DesktopTableProps {
   currentSongs: Song[];
+  allSongs?: Song[];
   spotifyPlaylists?: Playlist[] | null;
   youtubePlaylists?: Playlist[] | null;
   setSongToAdd: (song: Song) => void;
@@ -24,10 +25,11 @@ interface DesktopTableProps {
 }
 
 import { extractSpotifyId, extractYoutubeId } from "@/app/helpers/mediaUtils";
-import { usePlayer } from "@/app/contexts/PlayerContext";
+import { usePlayer, PlaylistItem } from "@/app/contexts/PlayerContext";
 
 const DesktopTableView: React.FC<DesktopTableProps> = ({
   currentSongs,
+  allSongs,
   setSongToAdd,
   setShowPlaylistModal,
   setShowUpdateForm,
@@ -38,7 +40,7 @@ const DesktopTableView: React.FC<DesktopTableProps> = ({
 }) => {
   const { currentProfile } = useSongs();
   const { profile, isLoggedIn } = useAuth();
-  const { play } = usePlayer();
+  const { playWithPlaylist } = usePlayer();
 
   const canEditOrDelete =
     isLoggedIn && currentProfile && profile && currentProfile.id === profile.id;
@@ -48,7 +50,19 @@ const DesktopTableView: React.FC<DesktopTableProps> = ({
     const id = type === 'youtube' ? extractYoutubeId(url) : extractSpotifyId(url);
 
     if (id) {
-      play(id, type);
+      // Build playlist from all songs (not just current page) for the same platform
+      const songsForPlaylist = allSongs || currentSongs;
+      const playlistItems: PlaylistItem[] = songsForPlaylist.flatMap((s) => {
+        const songUrl = type === 'youtube' ? s.youtubeUrl : s.spotifyUrl;
+        const songId = type === 'youtube' ? extractYoutubeId(songUrl) : extractSpotifyId(songUrl);
+        if (songId) {
+          return [{ id: songId, platform: type, title: s.title, artist: s.artist }];
+        }
+        return [];
+      });
+
+      const currentIndex = playlistItems.findIndex((item) => item.id === id);
+      playWithPlaylist(id, type, playlistItems, currentIndex >= 0 ? currentIndex : 0, song.title, song.artist);
     } else {
       // Fallback to new tab if parsing fails
       window.open(url, '_blank');

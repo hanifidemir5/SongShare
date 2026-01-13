@@ -140,6 +140,7 @@ export default function SongTable({ title, songs }: Props) {
 
           <SongListTable
             currentSongs={currentSongs}
+            allSongs={songs}
             setSongToAdd={setSongToAdd}
             setShowPlaylistModal={setShowPlaylistModal}
             setShowUpdateForm={setShowUpdateForm}
@@ -150,6 +151,7 @@ export default function SongTable({ title, songs }: Props) {
           />
           <MobileTableView
             currentSongs={currentSongs}
+            allSongs={songs}
             setSongToAdd={setSongToAdd}
             setShowPlaylistModal={setShowPlaylistModal}
             setShowUpdateForm={setShowUpdateForm}

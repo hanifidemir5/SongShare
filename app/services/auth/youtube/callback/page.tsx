@@ -50,7 +50,7 @@ export default function YouTubeCallbackPage() {
               const { error: signInError } = await supabase.auth.signInWithOAuth({
                 provider: "google",
                 options: {
-                  redirectTo: `${window.location.origin}/services/auth/youtube/callback`,
+                  redirectTo: `${process.env.NEXT_PUBLIC_REDIRECT_URI}/services/auth/youtube/callback`,
                   queryParams: {
                     access_type: "offline",
                     // prompt: "consent", // REMOVED: Don't force consent again

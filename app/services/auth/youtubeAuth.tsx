@@ -11,10 +11,7 @@ const SCOPES = [
 ];
 
 export function loginWithYouTube() {
-  const REDIRECT_URI = typeof window !== 'undefined'
-    ? `${window.location.origin}/services/auth/youtube/callback`
-    : "https://songshareforlove.netlify.app/services/auth/youtube/callback";
-
+  const REDIRECT_URI = `${process.env.NEXT_PUBLIC_REDIRECT_URI}/services/auth/youtube/callback`;
   const state = "youtube"; // unique identifier
   const authUrl = `${AUTH_ENDPOINT}?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(
     REDIRECT_URI

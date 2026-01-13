@@ -35,7 +35,7 @@ export default function SpotifyCallbackPage() {
               const { error: signInError } = await supabase.auth.signInWithOAuth({
                 provider: "spotify",
                 options: {
-                  redirectTo: `${window.location.origin}/services/auth/spotify/callback`,
+                  redirectTo: `${process.env.NEXT_PUBLIC_REDIRECT_URI}/services/auth/spotify/callback`,
                   scopes: [
                     "user-read-email",
                     "playlist-read-private",

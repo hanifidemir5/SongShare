@@ -7,12 +7,14 @@ import React, { useState } from "react";
 import { useSongs } from "../../app/contexts/SongsContext";
 import { searchSpotifyTrackByName } from "@/app/helpers/searchSpotifyTrackByName";
 import { useAuth } from "@/app/contexts/AuthContext";
+import ImportPlaylistModal from "./ImportPlaylistModal";
 
 function AddSong() {
   const { currentProfile, refetchSongs } = useSongs();
   const { isLoggedIn, user } = useAuth();
 
   const [showAddForm, setShowAddForm] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
   const [url, setUrl] = useState<string>("");
   const [category, setCategory] = useState<"recommended" | "favorites">("recommended");
 
@@ -293,12 +295,18 @@ function AddSong() {
         // DEFAULT STATE : BUTTONS
         <div>
           {isLoggedIn ? (
-            <div className="flex flex-row gap-4 justify-end">
+            <div className="flex flex-row flex-wrap gap-4 justify-end">
               <button className="btn" onClick={() => setShowAddForm(true)}>
                 Link ile Şarkı Ekle
               </button>
               <button className="btn" onClick={() => setShowAddForm(true)}>
                 Arama ile Şarkı Ekle
+              </button>
+              <button
+                className="btn !bg-purple-600 hover:!bg-purple-500"
+                onClick={() => setShowImportModal(true)}
+              >
+                Playlist Ekle
               </button>
             </div>
           ) : (
@@ -310,6 +318,12 @@ function AddSong() {
           )}
         </div>
       )}
+
+      {/* Import Playlist Modal */}
+      <ImportPlaylistModal
+        isOpen={showImportModal}
+        onClose={() => setShowImportModal(false)}
+      />
     </div>
   );
 }

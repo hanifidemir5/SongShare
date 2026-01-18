@@ -9,8 +9,45 @@ if (!supabaseUrl || !supabaseAnonKey) {
   );
 }
 
+// Basic Supabase Client - Simplified Configuration
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
 /**
- * Supabase Client with Enhanced Session Management
+ * PREVIOUS ENHANCED CONFIGURATION (COMMENTED OUT):
+ * 
+ * If you need to re-enable enhanced session management, uncomment below:
+ * 
+ * export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+ *   auth: {
+ *     // Extended timeout for initial session detection (default: 10s, now: 30s)
+ *     detectSessionInUrl: true,
+ *     flowType: 'pkce', // More secure auth flow
+ *     
+ *     // Session persistence (stores in localStorage by default)
+ *     persistSession: true,
+ *     
+ *     // Auto-refresh tokens before they expire
+ *     autoRefreshToken: true,
+ *     
+ *     // Storage key (default is fine, but explicit is better)
+ *     storageKey: 'supabase.auth.token',
+ *   },
+ *   global: {
+ *     headers: {
+ *       'x-application-name': 'listentothis',
+ *     },
+ *   },
+ *   // Network timeout for all requests (default: 10s, now: 30s for better reliability)
+ *   // This applies to all Supabase operations, not just auth
+ *   db: {
+ *     schema: 'public',
+ *   },
+ *   realtime: {
+ *     params: {
+ *       eventsPerSecond: 10,
+ *     },
+ *   },
+ * });
  * 
  * SESSION TOKEN MANAGEMENT - Handled Automatically by Supabase:
  * ✅ Access tokens (expire after 1 hour) - auto-refreshed
@@ -22,37 +59,4 @@ if (!supabaseUrl || !supabaseAnonKey) {
  * - Refresh tokens
  * - Store tokens (Supabase uses secure storage)
  * - Handle token expiration
- * 
- * Configuration below extends timeouts for better reliability.
  */
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    // Extended timeout for initial session detection (default: 10s, now: 30s)
-    detectSessionInUrl: true,
-    flowType: 'pkce', // More secure auth flow
-    
-    // Session persistence (stores in localStorage by default)
-    persistSession: true,
-    
-    // Auto-refresh tokens before they expire
-    autoRefreshToken: true,
-    
-    // Storage key (default is fine, but explicit is better)
-    storageKey: 'supabase.auth.token',
-  },
-  global: {
-    headers: {
-      'x-application-name': 'listentothis',
-    },
-  },
-  // Network timeout for all requests (default: 10s, now: 30s for better reliability)
-  // This applies to all Supabase operations, not just auth
-  db: {
-    schema: 'public',
-  },
-  realtime: {
-    params: {
-      eventsPerSecond: 10,
-    },
-  },
-});

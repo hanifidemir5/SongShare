@@ -8,8 +8,11 @@ export async function handleYouTubeCallback(authUser: {
   accessToken: string;
   refreshToken?: string | null;
 }) {
+  console.log("[DEBUG] handleYouTubeCallback started with user:", authUser.id);
   // Save Token to DB
+  console.log("[DEBUG] Saving YouTube token to DB for user:", authUser.id);
   await saveUserToken(authUser.id, "youtube", authUser.accessToken, authUser.refreshToken);
+  console.log("[DEBUG] YouTube token saved successfully");
   const youtubeId =
     authUser.user_metadata?.sub ?? authUser.user_metadata?.provider_id ?? null;
 
@@ -19,13 +22,19 @@ export async function handleYouTubeCallback(authUser: {
     authUser.email ??
     "Unknown";
 
+  console.log("[DEBUG] YouTube ID:", youtubeId, "Display Name:", displayName);
+
+  console.log("[DEBUG] Checking for existing profile...");
   const { data: existingProfile } = await supabase
     .from("profiles")
     .select("*")
     .eq("id", authUser.id)
     .maybeSingle();
 
+  console.log("[DEBUG] Existing profile:", existingProfile ? "Found" : "Not found");
+
   if (existingProfile) {
+    console.log("[DEBUG] Updating existing profile...");
     await supabase
       .from("profiles")
       .update({
@@ -35,10 +44,12 @@ export async function handleYouTubeCallback(authUser: {
       })
       .eq("id", authUser.id);
 
+    console.log("[DEBUG] Profile updated successfully");
     return;
   }
 
   // Create new profile
+  console.log("[DEBUG] Creating new profile...");
   const { error: profileError } = await supabase
     .from("profiles")
     .insert({
@@ -51,7 +62,11 @@ export async function handleYouTubeCallback(authUser: {
     .select()
     .single();
 
-  if (profileError) throw profileError;
+  if (profileError) {
+    console.error("[DEBUG] Profile creation error:", profileError);
+    throw profileError;
+  }
 
+  console.log("[DEBUG] Profile created successfully");
   return;
 }

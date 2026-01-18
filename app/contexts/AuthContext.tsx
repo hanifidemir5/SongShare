@@ -89,36 +89,29 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return () => subscription.subscription.unsubscribe();
   }, [fetchProfile]);
 
-  // --- DÜZELTİLDİ: Logout işlemi veritabanını sıfırlamamalı ---
+  // Logout: Only sign out, keep platform connections intact
   const logout = async () => {
     try {
       toast.info("Çıkış yapılıyor...");
-
-      // 0. Disconnect Providers (Requested: "logout from all platforms")
-      // This ensures next login is fresh
-      if (profile?.is_spotify_connected) await disconnectSpotify();
-      if (profile?.is_youtube_connected) await disconnectYouTube();
 
       // 1. Immediate Local Cleanup (Optimistic UI)
       setUser(null);
       setProfile(null);
       setIsLoggedIn(false);
 
-      // 2. Clear Tokens
+      // 2. Clear Local Token Cache (not database tokens)
       localStorage.removeItem("youtube_token");
       localStorage.removeItem("spotify_token");
-      // Optional: Clear everything if we want to be nuclear
-      // localStorage.clear(); 
 
-      // 3. Attempt Server SignOut with Timeout
+      // 3. Sign Out from Supabase with Timeout
       // We don't want to block the user if Supabase is unreachable
       const signOutPromise = supabase.auth.signOut();
-      const timeoutPromise = new Promise((resolve) => setTimeout(resolve, 2000));
+      const timeoutPromise = new Promise((resolve) => setTimeout(resolve, 3000));
 
       await Promise.race([signOutPromise, timeoutPromise]);
 
     } catch (error) {
-      console.error("Logout error (ignored):", error);
+      // Silently handle errors
     } finally {
       // 4. Always Reload to reset application state
       window.location.reload();
@@ -240,7 +233,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       scopes: [
         "email",
         "profile",
-        "https://www.googleapis.com/auth/youtube",
+        "https://www.googleapis.com/auth/youtube", // Full YouTube access
+        "https://www.googleapis.com/auth/youtube.force-ssl", // Manage playlists
       ].join(" "),
     };
 

@@ -9,6 +9,11 @@ import { searchSpotifyTrackByName } from "@/app/helpers/searchSpotifyTrackByName
 import { useAuth } from "@/app/contexts/AuthContext";
 import ImportPlaylistModal from "./ImportPlaylistModal";
 import { toast } from "react-toastify";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faSpinner } from "@fortawesome/free-solid-svg-icons";
+import { createSpotifyPlaylist } from "@/app/helpers/createSpotifyPlaylist";
+import { createYouTubePlaylist } from "@/app/helpers/createYouTubePlaylist";
+import { getSpotifyTokens, getYouTubeTokens } from "@/app/helpers/getSpotifyToken";
 
 interface Category {
   id: string;
@@ -22,6 +27,7 @@ function AddSong() {
 
   const [showAddForm, setShowAddForm] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
+  const [showCreatePlaylistModal, setShowCreatePlaylistModal] = useState(false);
   const [url, setUrl] = useState<string>("");
   const [availableCategories, setAvailableCategories] = useState<Category[]>([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>("");
@@ -343,18 +349,27 @@ function AddSong() {
         // DEFAULT STATE : BUTTONS
         <div>
           {isLoggedIn ? (
-            <div className="flex flex-row flex-wrap gap-4 justify-end">
-              <button className="btn" onClick={() => setShowAddForm(true)}>
-                Link ile Şarkı Ekle
-              </button>
-              <button className="btn" onClick={() => setShowAddForm(true)}>
-                Arama ile Şarkı Ekle
-              </button>
+            <div className="flex flex-row flex-wrap gap-4 justify-between">
+              <div className="flex gap-4">
+                <button className="btn" onClick={() => setShowAddForm(true)}>
+                  Link ile Şarkı Ekle
+                </button>
+                <button className="btn" onClick={() => setShowAddForm(true)}>
+                  Arama ile Şarkı Ekle
+                </button>
+                <button
+                  className="btn !bg-purple-600 hover:!bg-purple-500"
+                  onClick={() => setShowImportModal(true)}
+                >
+                  Playlist Ekle
+                </button>
+              </div>
               <button
-                className="btn !bg-purple-600 hover:!bg-purple-500"
-                onClick={() => setShowImportModal(true)}
+                className="btn !bg-indigo-600 hover:!bg-indigo-500"
+                onClick={() => setShowCreatePlaylistModal(true)}
+                title="Yeni Playlist Oluştur"
               >
-                Playlist Ekle
+                + Playlist Oluştur
               </button>
             </div>
           ) : (
@@ -367,11 +382,161 @@ function AddSong() {
         </div>
       )}
 
+
       {/* Import Playlist Modal */}
       <ImportPlaylistModal
         isOpen={showImportModal}
         onClose={() => setShowImportModal(false)}
       />
+
+      {/* Create Playlist Modal */}
+      {showCreatePlaylistModal && (
+        <CreatePlaylistModal
+          onClose={() => setShowCreatePlaylistModal(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+// Create Playlist Modal Component
+function CreatePlaylistModal({ onClose }: { onClose: () => void }) {
+  const { profile } = useAuth();
+  const [selectedPlatform, setSelectedPlatform] = useState<"Spotify" | "YouTube" | "">("");
+  const [playlistName, setPlaylistName] = useState("");
+  const [isCreating, setIsCreating] = useState(false);
+
+  const hasSpotify = profile?.is_spotify_connected;
+  const hasYouTube = profile?.is_youtube_connected;
+
+  const handleCreate = async () => {
+    if (!selectedPlatform) {
+      toast.error("Lütfen bir platform seçin");
+      return;
+    }
+
+    if (!playlistName.trim()) {
+      toast.error("Lütfen bir playlist adı girin");
+      return;
+    }
+
+    setIsCreating(true);
+    try {
+      if (selectedPlatform === "Spotify") {
+        const { accessToken } = await getSpotifyTokens();
+        if (!accessToken) {
+          toast.error("Spotify token bulunamadı");
+          return;
+        }
+
+        const result = await createSpotifyPlaylist(accessToken, playlistName.trim());
+        if (result) {
+          toast.success(`✅ "${result.name}" Spotify'da oluşturuldu!`);
+          onClose();
+        } else {
+          toast.error("Playlist oluşturulamadı");
+        }
+      } else { // YouTube
+        const { accessToken } = await getYouTubeTokens();
+        if (!accessToken) {
+          toast.error("YouTube token bulunamadı");
+          return;
+        }
+
+        const result = await createYouTubePlaylist(accessToken, playlistName.trim());
+        if (result) {
+          toast.success(`✅ "${result.title}" YouTube'da oluşturuldu!`);
+          onClose();
+        } else {
+          toast.error("Playlist oluşturulamadı");
+        }
+      }
+    } catch (error: any) {
+      const errorReason = error?.error?.errors?.[0]?.reason || "";
+
+      if (errorReason === "youtubeSignupRequired") {
+        toast.error(
+          <div>
+            <p><strong>YouTube Kanalı Gerekli!</strong></p>
+            <p>Playlist oluşturmak için YouTube kanalınız olmalı.</p>
+            <a href="https://www.youtube.com/create_channel" target="_blank" rel="noopener noreferrer">
+              → Kanal Oluştur
+            </a>
+          </div>,
+          { autoClose: 10000 }
+        );
+      } else {
+        toast.error("Bir hata oluştu");
+      }
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  const getButtonColor = () => {
+    if (!selectedPlatform) return "bg-gray-600";
+    return selectedPlatform === "Spotify" ? "bg-green-600 hover:bg-green-500" : "bg-red-600 hover:bg-red-500";
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div className="bg-gray-900 p-6 rounded-lg space-y-4 w-96 border border-gray-700">
+        <h3 className="text-lg font-semibold">Yeni Playlist Oluştur</h3>
+
+        {/* Platform Selection */}
+        <select
+          value={selectedPlatform}
+          onChange={(e) => setSelectedPlatform(e.target.value as "Spotify" | "YouTube")}
+          className="input w-full bg-gray-800 text-white rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        >
+          <option value="">Platform Seç...</option>
+          {hasSpotify && <option value="Spotify">Spotify</option>}
+          {hasYouTube && <option value="YouTube">YouTube</option>}
+        </select>
+
+        <input
+          type="text"
+          value={playlistName}
+          onChange={(e) => setPlaylistName(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && !isCreating && handleCreate()}
+          placeholder="Playlist adı girin..."
+          className="input w-full bg-gray-800 text-white rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          disabled={!selectedPlatform}
+        />
+
+
+        {/* Action Buttons - Only show if platforms are connected */}
+        {(hasSpotify || hasYouTube) && (
+          <div className="flex gap-2 justify-end">
+            <button
+              onClick={handleCreate}
+              disabled={isCreating || !playlistName.trim() || !selectedPlatform}
+              className={`btn ${getButtonColor()} disabled:opacity-50 disabled:cursor-not-allowed px-4 py-2 flex items-center gap-2`}
+            >
+              {isCreating && <FontAwesomeIcon icon={faSpinner} className="animate-spin" />}
+              {isCreating ? "Oluşturuluyor..." : "Oluştur"}
+            </button>
+            <button
+              onClick={onClose}
+              className="btn bg-gray-600 hover:bg-gray-500 px-4 py-2"
+            >
+              İptal
+            </button>
+          </div>
+        )}
+
+        {/* Close button when no platforms connected */}
+        {!hasSpotify && !hasYouTube && (
+          <div className="flex justify-end">
+            <button
+              onClick={onClose}
+              className="btn bg-gray-600 hover:bg-gray-500 px-4 py-2"
+            >
+              Kapat
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import type { Song } from "../../../app/types";
 import { getUserPlaylists as getSpotifyPlaylists } from "@/app/helpers/spotifyApi";
 import { getUserPlaylists as getYouTubePlaylists } from "@/app/helpers/youtubeApi";
@@ -41,59 +41,65 @@ export default function SongTable({ title, songs }: Props) {
 
   const [showUpdateForm, setShowUpdateForm] = useState<boolean>(false);
 
+  // Extract fetchAllPlaylists so it can be called from modal callback
+  const fetchAllPlaylists = useCallback(async () => {
+    // --- 1. SPOTIFY İŞLEMLERİ ---
+    if (profile?.is_spotify_connected) {
+      try {
+        const { accessToken, refreshToken } = await getSpotifyTokens();
+        if (accessToken) {
+          const playlists = await getSpotifyPlaylists(accessToken);
+          setSpotifyPlaylists(playlists);
+        } else {
+          console.warn(
+            "Spotify Access Token alınamadı. Yeniden giriş gerekebilir."
+          );
+          setSpotifyPlaylists([]);
+        }
+      } catch (error) {
+        console.error("Spotify oynatma listeleri çekilirken hata:", error);
+      }
+    } else {
+      // Bağlantı kesikse veya profil yoksa listeyi temizle
+      setSpotifyPlaylists([]);
+    }
+
+    // --- 2. YOUTUBE İŞLEMLERİ ---
+    if (profile?.is_youtube_connected) {
+      try {
+        const { accessToken } = await getYouTubeTokens();
+        const playlists = await getYouTubePlaylists(accessToken);
+        setYoutubePlaylists(playlists);
+      } catch (err) {
+        const apiError = err as any;
+        const code = apiError?.error?.code;
+        const message = apiError?.error?.message;
+
+        // Handle "Channel not found" error - user hasn't created a YouTube channel yet
+        // This is normal and should be treated as having zero playlists
+        if (code === 404 && message?.includes("channelNotFound")) {
+          console.log("[DEBUG] YouTube channel not found - treating as empty playlist list");
+          setYoutubePlaylists([]); // Empty list, but still allow creating playlists
+        }
+        // Token refresh is handled automatically by getYouTubeTokens()
+        // Only log errors for debugging, don't show user warnings for token issues
+        else if (code === 401) {
+          console.warn("YouTube token expired or invalid (401) - token should have been auto-refreshed");
+          setYoutubePlaylists([]);
+        } else {
+          console.error(
+            "YouTube oynatma listeleri çekilirken beklenmeyen hata:",
+            err
+          );
+          setYoutubePlaylists([]);
+        }
+      }
+    } else {
+      setYoutubePlaylists([]);
+    }
+  }, [profile?.is_spotify_connected, profile?.is_youtube_connected]);
+
   useEffect(() => {
-    // useEffect içinde asenkron bir ana fonksiyon tanımla
-    const fetchAllPlaylists = async () => {
-      // --- 1. SPOTIFY İŞLEMLERİ ---
-      if (profile?.is_spotify_connected) {
-        try {
-          const { accessToken, refreshToken } = await getSpotifyTokens();
-          if (accessToken) {
-            const playlists = await getSpotifyPlaylists(accessToken);
-            setSpotifyPlaylists(playlists);
-          } else {
-            console.warn(
-              "Spotify Access Token alınamadı. Yeniden giriş gerekebilir."
-            );
-            setSpotifyPlaylists([]);
-          }
-        } catch (error) {
-          console.error("Spotify oynatma listeleri çekilirken hata:", error);
-        }
-      } else {
-        // Bağlantı kesikse veya profil yoksa listeyi temizle
-        setSpotifyPlaylists([]);
-      }
-
-      // --- 2. YOUTUBE İŞLEMLERİ ---
-      if (profile?.is_youtube_connected) {
-        try {
-          const { accessToken } = await getYouTubeTokens();
-          const playlists = await getYouTubePlaylists(accessToken);
-          setYoutubePlaylists(playlists);
-        } catch (err) {
-          const apiError = err as any;
-          const code = apiError?.error?.code;
-
-          if (code === 401) {
-            console.warn("YouTube token expired or invalid (401).");
-            toast.warn("YouTube oturumu zaman aşımına uğradı. Lütfen sayfayı yenileyin veya tekrar giriş yapın.", {
-              position: "top-right",
-              toastId: "youtube-expired",
-            });
-            // disconnectYouTube(); // <-- REMOVED: Don't auto-disconnect
-          } else {
-            console.error(
-              "YouTube oynatma listeleri çekilirken beklenmeyen hata:",
-              err
-            );
-          }
-        }
-      } else {
-        setYoutubePlaylists([]);
-      }
-    };
-
     fetchAllPlaylists();
   }, [
     profile?.is_spotify_connected,
@@ -193,11 +199,13 @@ export default function SongTable({ title, songs }: Props) {
           </button>
         </div>
       </div>
+
       <PlaylistModal
         show={showPlaylistModal}
         song={songToAdd}
         spotifyPlaylists={spotifyPlaylists}
         youtubePlaylists={youtubePlaylists}
+        onPlaylistCreated={fetchAllPlaylists}
         onClose={() => {
           setShowPlaylistModal(false);
           setSongToAdd(null);

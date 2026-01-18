@@ -78,17 +78,54 @@ export const SongsProvider = ({ children }: Props) => {
     fetchGlobalCategories();
   }, []);
 
-  // Fetch all users once on mount
+  // Fetch profiles - filtered by group membership
   const fetchProfiles = async () => {
-    const { data, error } = await supabase.from("profiles").select("*");
-    if (error) {
-      console.error("CRITICAL: Error fetching profiles from Supabase:", error);
-      console.error("Supabase URL:", process.env.NEXT_PUBLIC_SUPABASE_URL); // Debug config
+    // Get current logged-in user to check their group
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      // Guest mode - show no profiles
+      setProfileList([]);
+      setCurrentProfile(null);
       return;
     }
+
+    // Get current user's profile to check group_id
+    const { data: myProfile } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", user.id)
+      .single();
+
+    if (!myProfile) {
+      setProfileList([]);
+      return;
+    }
+
+    let query = supabase.from("profiles").select("*");
+
+    // If user is in a group, only fetch profiles from same group
+    if (myProfile.group_id) {
+      query = query.eq("group_id", myProfile.group_id);
+    } else {
+      // If user has no group, only show their own profile
+      query = query.eq("id", user.id);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      // Silently handle error
+      return;
+    }
+
     setProfileList(data ?? []);
-    if ((data && data.length > 0) || currentProfile == null)
-      setCurrentProfile(data[0]);
+
+    // Set current profile to user's own profile
+    if (data && data.length > 0) {
+      const ownProfile = data.find(p => p.id === user.id);
+      setCurrentProfile(ownProfile || data[0]);
+    }
   };
 
   React.useEffect(() => {

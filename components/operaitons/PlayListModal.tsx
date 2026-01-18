@@ -7,6 +7,7 @@ import {
   getSpotifyTokens,
   getYouTubeTokens,
 } from "@/app/helpers/getSpotifyToken";
+import { toast } from "react-toastify";
 
 interface Playlist {
   id: string;
@@ -124,7 +125,7 @@ const PlaylistModal: React.FC<PlaylistModalProps> = ({
                   addToYouTubePlaylist(accessToken, song, selectedPlaylist, spotifyTokens.accessToken);
                 } else {
                   console.error("YouTube token missing");
-                  alert("YouTube oturumu açık değil veya token alınamadı.");
+                  toast.error("YouTube oturumu açık değil veya token alınamadı.");
                 }
               }
               onClose();

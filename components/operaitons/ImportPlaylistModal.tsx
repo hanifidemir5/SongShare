@@ -8,9 +8,13 @@ import { useSongs } from "@/app/contexts/SongsContext";
 import { getUserPlaylists } from "@/app/helpers/spotifyApi";
 import { fetchSpotifyPlaylistTracks } from "@/app/helpers/fetchSpotifyPlaylistTracks";
 import { fetchYouTubePlaylistTracks, getUserYouTubePlaylists } from "@/app/helpers/fetchYouTubePlaylistTracks";
+import { getSpotifyIdFromYouTubeUrl } from "@/app/helpers/getSpotifyIdFromYouTubeUrl";
 import { getYouTubeIdFromSpotifyUrl } from "@/app/helpers/getYouTubeUrlFromSpotify";
+import { getUserToken } from "@/app/helpers/tokenManager";
 import { supabase } from "@/lib/supabaseClient";
 import { v4 as uuidv4 } from "uuid";
+import { toast } from "react-toastify";
+import { Profile } from "@/app/types";
 
 interface ImportPlaylistModalProps {
     isOpen: boolean;
@@ -46,6 +50,7 @@ export default function ImportPlaylistModal({ isOpen, onClose }: ImportPlaylistM
     const [selectedPlaylist, setSelectedPlaylist] = useState<PlaylistOption | null>(null);
     const [tracks, setTracks] = useState<TrackToImport[]>([]);
     const [selectedTracks, setSelectedTracks] = useState<Set<string>>(new Set());
+    const [categoryName, setCategoryName] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [isImporting, setIsImporting] = useState(false);
     const [importProgress, setImportProgress] = useState(0);
@@ -58,7 +63,9 @@ export default function ImportPlaylistModal({ isOpen, onClose }: ImportPlaylistM
             setPlaylists([]);
             setSelectedPlaylist(null);
             setTracks([]);
+            setTracks([]);
             setSelectedTracks(new Set());
+            setCategoryName("");
             setIsLoading(false);
             setIsImporting(false);
             setImportProgress(0);
@@ -83,10 +90,16 @@ export default function ImportPlaylistModal({ isOpen, onClose }: ImportPlaylistM
                         trackCount: pl.tracks?.total || 0,
                     }))
                 );
-            } else if (selectedPlatform === "youtube") {
-                const youtubeToken = localStorage.getItem("youtube_token");
+            } else if (selectedPlatform === "youtube" && user) {
+                // Fetch token from DB
+                const tokenData = await getUserToken(user.id, "youtube");
+                console.log("DEBUG: Token Data from DB (Platform Select):", tokenData);
+                const youtubeToken = tokenData?.accessToken;
+
                 if (youtubeToken) {
+                    console.log("DEBUG: Fetching playlists with token:", youtubeToken.substring(0, 10) + "...");
                     const youtubePlaylists = await getUserYouTubePlaylists(youtubeToken);
+                    console.log("DEBUG: Fetched Playlists:", youtubePlaylists);
                     setPlaylists(
                         youtubePlaylists.map((pl) => ({
                             id: pl.id,
@@ -94,6 +107,8 @@ export default function ImportPlaylistModal({ isOpen, onClose }: ImportPlaylistM
                             trackCount: pl.itemCount,
                         }))
                     );
+                } else {
+                    console.error("DEBUG: No YouTube token found for user");
                 }
             }
         } catch (error) {
@@ -117,14 +132,21 @@ export default function ImportPlaylistModal({ isOpen, onClose }: ImportPlaylistM
                     profile.spotify_access_token,
                     MAX_TRACKS
                 );
-            } else if (platform === "youtube") {
-                const youtubeToken = localStorage.getItem("youtube_token");
+            } else if (platform === "youtube" && user) {
+                const tokenData = await getUserToken(user.id, "youtube");
+                console.log("DEBUG: Token Data from DB (Playlist Select):", tokenData);
+                const youtubeToken = tokenData?.accessToken;
+
                 if (youtubeToken) {
+                    console.log("DEBUG: Fetching tracks for playlist:", playlist.id);
                     fetchedTracks = await fetchYouTubePlaylistTracks(
                         playlist.id,
                         youtubeToken,
                         MAX_TRACKS
                     );
+                    console.log("DEBUG: Fetched Tracks Count:", fetchedTracks.length);
+                } else {
+                    console.error("DEBUG: No YouTube token found during track fetch");
                 }
             }
 
@@ -142,6 +164,13 @@ export default function ImportPlaylistModal({ isOpen, onClose }: ImportPlaylistM
     const handleImport = async () => {
         if (!user || selectedTracks.size === 0) return;
 
+        // Validate category name
+        const trimmedCategoryName = categoryName.trim();
+        if (!trimmedCategoryName) {
+            toast.error("Lütfen kategori adı girin!");
+            return;
+        }
+
         // Filter tracks to only include selected ones
         const tracksToImport = tracks.filter((_, idx) => selectedTracks.has(idx.toString()));
         if (tracksToImport.length === 0) return;
@@ -150,7 +179,43 @@ export default function ImportPlaylistModal({ isOpen, onClose }: ImportPlaylistM
         setImportProgress(0);
 
         try {
-            // For Spotify tracks, fetch YouTube URLs first
+            // STEP 1: Create category first
+            const { data: existingCategory } = await supabase
+                .from("Category")
+                .select("name")
+                .eq("name", trimmedCategoryName)
+                .eq("user_id", user.id)
+                .single();
+
+            if (existingCategory) {
+                toast.warning(`"${trimmedCategoryName}" kategorisi zaten mevcut! Lütfen farklı bir isim seçin.`);
+                setIsImporting(false);
+                return;
+            }
+
+            // Insert new category and get its ID
+            const { data: newCategory, error: categoryError } = await supabase
+                .from("Category")
+                .insert({
+                    user_id: user.id,
+                    name: trimmedCategoryName,
+                    category_type: "custom",
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString(),
+                })
+                .select('id')
+                .single();
+
+            if (categoryError || !newCategory) {
+                console.error("Error creating category:", categoryError);
+                toast.error("Kategori oluşturulurken hata oluştu!");
+                setIsImporting(false);
+                return;
+            }
+
+            const categoryId = newCategory.id;
+
+            // STEP 2: For Spotify tracks, fetch YouTube URLs
             let enrichedTracks = tracksToImport;
             if (platform === "spotify" && profile?.spotify_access_token) {
                 const youtubeApiKey = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
@@ -173,14 +238,14 @@ export default function ImportPlaylistModal({ isOpen, onClose }: ImportPlaylistM
                         } catch (err) {
                             console.warn(`Could not fetch YouTube URL for ${track.title}:`, err);
                         }
-                        // Update progress during YouTube fetching (first 50%)
-                        setImportProgress(Math.round(((idx + 1) / totalTracks) * 50));
+                        // Update progress during YouTube fetching (first 40%)
+                        setImportProgress(Math.round(((idx + 1) / totalTracks) * 40));
                         return track;
                     })
                 );
             }
 
-            // Check for existing songs to prevent duplicates
+            // STEP 3: Check for existing songs to prevent duplicates (in this category)
             const spotifyUrls = enrichedTracks
                 .filter(t => t.spotifyUrl)
                 .map(t => t.spotifyUrl as string);
@@ -188,14 +253,13 @@ export default function ImportPlaylistModal({ isOpen, onClose }: ImportPlaylistM
                 .filter(t => t.youtubeUrl)
                 .map(t => t.youtubeUrl as string);
 
-            // Query existing songs in the same category only
             let existingUrls = new Set<string>();
             if (spotifyUrls.length > 0 || youtubeUrls.length > 0) {
                 const { data: existingSongs } = await supabase
                     .from("Song")
                     .select("spotifyUrl, youtubeUrl")
                     .eq("addedBy", user.id)
-                    .eq("category", "myPlaylist");
+                    .eq("Category", categoryId);
 
                 if (existingSongs) {
                     existingSongs.forEach((song: { spotifyUrl?: string; youtubeUrl?: string }) => {
@@ -215,11 +279,12 @@ export default function ImportPlaylistModal({ isOpen, onClose }: ImportPlaylistM
             const skippedCount = enrichedTracks.length - nonDuplicateTracks.length;
 
             if (nonDuplicateTracks.length === 0) {
-                alert(`Tüm şarkılar zaten eklenmiş! (${skippedCount} şarkı atlandı)`);
+                toast.info(`Tüm şarkılar zaten eklenmiş! (${skippedCount} şarkı atlandı)`);
                 setIsImporting(false);
                 return;
             }
 
+            // STEP 4: Insert songs with the custom category ID
             const songsToInsert = nonDuplicateTracks.map((track) => ({
                 id: uuidv4(),
                 title: track.title,
@@ -227,10 +292,10 @@ export default function ImportPlaylistModal({ isOpen, onClose }: ImportPlaylistM
                 spotifyUrl: track.spotifyUrl || null,
                 youtubeUrl: track.youtubeUrl || null,
                 addedBy: user.id,
-                category: "myPlaylist",
+                Category: categoryId, // Use category ID!
             }));
 
-            // Insert in batches to show progress (second 50%)
+            // Insert in batches to show progress (40-100%)
             const batchSize = 10;
             for (let i = 0; i < songsToInsert.length; i += batchSize) {
                 const batch = songsToInsert.slice(i, i + batchSize);
@@ -242,24 +307,25 @@ export default function ImportPlaylistModal({ isOpen, onClose }: ImportPlaylistM
                     throw error;
                 }
 
-                // Progress: 50-100% for database insert
-                setImportProgress(50 + Math.min(50, Math.round(((i + batchSize) / songsToInsert.length) * 50)));
+                // Progress: 40-100% for database insert
+                setImportProgress(40 + Math.round(((i + batchSize) / songsToInsert.length) * 60));
             }
 
             // Refresh songs
             await refetchSongs();
 
-            // Show success message with skip info
-            if (skippedCount > 0) {
-                alert(`${nonDuplicateTracks.length} şarkı eklendi, ${skippedCount} şarkı zaten mevcut olduğu için atlandı.`);
-            }
+            // Show success message
+            const msg = skippedCount > 0
+                ? `${nonDuplicateTracks.length} şarkı "${trimmedCategoryName}" kategorisine eklendi. ${skippedCount} şarkı zaten mevcut olduğu için atlandı.`
+                : `${nonDuplicateTracks.length} şarkı "${trimmedCategoryName}" kategorisine başarıyla eklendi!`;
+            toast.success(msg);
 
             // Close modal
             onClose();
         } catch (error: any) {
             console.error("Import failed:", error);
             const errorMessage = error?.message || "Bilinmeyen hata";
-            alert(`İçe aktarma başarısız oldu: ${errorMessage}`);
+            toast.error(`İçe aktarma başarısız oldu: ${errorMessage}`);
         } finally {
             setIsImporting(false);
         }
@@ -424,6 +490,23 @@ export default function ImportPlaylistModal({ isOpen, onClose }: ImportPlaylistM
                                         </span>
                                     </div>
 
+                                    {/* Category Name Input */}
+                                    <div className="mb-4">
+                                        <label className="block text-sm font-medium text-gray-300 mb-2">
+                                            Kategori Adı <span className="text-red-400">*</span>
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={categoryName}
+                                            onChange={(e) => setCategoryName(e.target.value)}
+                                            placeholder="Örn: Rock Favorilerim, 2024 Hitleri..."
+                                            className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"
+                                        />
+                                        <p className="text-xs text-gray-500 mt-1">
+                                            Bu isimle yeni bir kategori oluşturulacak
+                                        </p>
+                                    </div>
+
                                     {/* Select All / Deselect All Toggle */}
                                     <div className="flex items-center justify-between px-2 py-2 bg-white/5 rounded-lg mb-2">
                                         <label className="flex items-center gap-2 cursor-pointer">
@@ -504,28 +587,30 @@ export default function ImportPlaylistModal({ isOpen, onClose }: ImportPlaylistM
                 </div>
 
                 {/* Footer */}
-                {step === "preview" && !isLoading && tracks.length > 0 && (
-                    <div className="px-5 py-4 border-t border-white/10 flex justify-end">
-                        <button
-                            onClick={handleImport}
-                            disabled={isImporting || selectedTracks.size === 0}
-                            className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors"
-                        >
-                            {isImporting ? (
-                                <>
-                                    <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
-                                    İçe Aktarılıyor...
-                                </>
-                            ) : (
-                                <>
-                                    <FontAwesomeIcon icon={faCheck} className="w-4 h-4" />
-                                    İçe Aktar ({selectedTracks.size} şarkı)
-                                </>
-                            )}
-                        </button>
-                    </div>
-                )}
-            </div>
-        </div>
+                {
+                    step === "preview" && !isLoading && tracks.length > 0 && (
+                        <div className="px-5 py-4 border-t border-white/10 flex justify-end">
+                            <button
+                                onClick={handleImport}
+                                disabled={isImporting || selectedTracks.size === 0 || !categoryName.trim()}
+                                className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors"
+                            >
+                                {isImporting ? (
+                                    <>
+                                        <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
+                                        İçe Aktarılıyor...
+                                    </>
+                                ) : (
+                                    <>
+                                        <FontAwesomeIcon icon={faCheck} className="w-4 h-4" />
+                                        İçe Aktar ({selectedTracks.size} şarkı)
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    )
+                }
+            </div >
+        </div >
     );
 }

@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import { useAuth } from "@/app/contexts/AuthContext";
+import { toast } from "react-toastify";
 import Modal from "../../../app/ui/Modal";
 
 export default function LoginModal({
@@ -24,7 +26,7 @@ export default function LoginModal({
       });
 
       if (error) {
-        alert(error.message);
+        toast.error(error.message);
         return;
       }
 
@@ -32,7 +34,7 @@ export default function LoginModal({
       setPassword("");
       onClose();
     } catch (err: any) {
-      alert(err.message);
+      toast.error(err.message);
     } finally {
       setLoading(false);
     }

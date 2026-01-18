@@ -2,6 +2,7 @@
 
 import { useState, FormEvent } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import { toast } from "react-toastify";
 import Modal from "../../../app/ui/Modal";
 
 export default function RegisterModal({
@@ -21,7 +22,7 @@ export default function RegisterModal({
 
     const cleanEmail = email.trim();
     if (!name || !cleanEmail || !password) {
-      alert("Please fill in all fields.");
+      toast.error("Please fill in all fields.");
       return;
     }
 
@@ -34,11 +35,11 @@ export default function RegisterModal({
     });
 
     if (error) {
-      alert(error.message);
+      toast.error(error.message);
       return;
     }
 
-    alert("Registered successfully!");
+    toast.success("Registered successfully!");
   }
 
   return (

@@ -3,6 +3,7 @@ import { Song } from "@/app/types";
 import { supabase } from "@/lib/supabaseClient";
 import React, { useEffect, useState } from "react";
 import { useSongs } from "@/app/contexts/SongsContext";
+import { toast } from "react-toastify";
 
 type Props = {
   showUpdateForm: boolean;
@@ -20,7 +21,7 @@ function EditSong({ showUpdateForm, setShowUpdateForm, song }: Props) {
     youtubeUrl: song.youtubeUrl || "",
     spotifyUrl: song.spotifyUrl || "",
     addedBy: song.addedBy,
-    category: song.category,
+    Category: song.Category,
   });
 
   // Keep local state in sync if song prop changes
@@ -33,7 +34,7 @@ function EditSong({ showUpdateForm, setShowUpdateForm, song }: Props) {
         youtubeUrl: song.youtubeUrl || "",
         spotifyUrl: song.spotifyUrl || "",
         addedBy: song.addedBy,
-        category: song.category,
+        Category: song.Category,
       });
     }
   }, [song]);
@@ -42,19 +43,22 @@ function EditSong({ showUpdateForm, setShowUpdateForm, song }: Props) {
   async function handleSubmit() {
     if (!updateForm) return;
 
-    const { error } = await supabase
-      .from("Song")
-      .update({
-        title: updateForm.title,
-        artist: updateForm.artist,
-        youtubeUrl: updateForm.youtubeUrl,
-        spotifyUrl: updateForm.spotifyUrl,
-      })
-      .eq("id", updateForm.id);
+    try {
+      const { error } = await supabase
+        .from("Song")
+        .update({
+          title: updateForm.title,
+          artist: updateForm.artist,
+          youtubeUrl: updateForm.youtubeUrl,
+          spotifyUrl: updateForm.spotifyUrl,
+        })
+        .eq("id", updateForm.id);
 
-    if (error) {
-      console.error("Şarkı güncellenemedi:", error);
-      alert("Şarkı güncellenemedi!");
+      if (error) {
+        throw error;
+      }
+    } catch (error) {
+      toast.error("Şarkı güncellenemedi!");
       return;
     }
 

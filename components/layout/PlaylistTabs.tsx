@@ -3,30 +3,34 @@
 import { useState } from "react";
 import SongTable from "./SongTable/SongTable";
 import { Song } from "@/app/types";
+import { CustomCategory } from "@/app/contexts/SongsContext";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faHeadphones, faStar, faHistory, faChartLine, faGlobe, faListUl, faTrash, faExclamationTriangle, faChevronDown } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "@/app/contexts/AuthContext";
 import { useSongs } from "@/app/contexts/SongsContext";
 import { supabase } from "@/lib/supabaseClient";
+import { toast } from "react-toastify";
 
 type Props = {
     recommendedSongs: Song[];
     favoriteSongs: Song[];
     myPlaylistSongs?: Song[];
+    customCategories: CustomCategory[];
     recentlyPlayed: Song[];
     topTracks?: Song[];
     globalTopTracks?: Song[];
 };
 
-export default function PlaylistTabs({ recommendedSongs, favoriteSongs, myPlaylistSongs, recentlyPlayed, topTracks, globalTopTracks }: Props) {
+export default function PlaylistTabs({ recommendedSongs, favoriteSongs, myPlaylistSongs, customCategories, recentlyPlayed, topTracks, globalTopTracks }: Props) {
     const { isLoggedIn, user } = useAuth();
     const { refetchSongs } = useSongs();
 
     // Default tab: if logged in, show recommended; if guest, show topTracks
-    const [activeTab, setActiveTab] = useState<"recommended" | "favorites" | "myPlaylist" | "history" | "topTracks" | "globalTop">(
+    const [activeTab, setActiveTab] = useState<string>(
         isLoggedIn ? "recommended" : "topTracks"
     );
     const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [categoryToDelete, setCategoryToDelete] = useState<CustomCategory | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
 
     const handleDeletePlaylist = async () => {
@@ -42,8 +46,7 @@ export default function PlaylistTabs({ recommendedSongs, favoriteSongs, myPlayli
                 .eq("category", "myPlaylist");
 
             if (error) {
-                console.error("Error deleting playlist:", error);
-                alert("Playlist silinirken hata oluştu!");
+                toast.error("Playlist silinirken hata oluştu!");
                 return;
             }
 
@@ -54,8 +57,49 @@ export default function PlaylistTabs({ recommendedSongs, favoriteSongs, myPlayli
             setActiveTab("recommended");
             setShowDeleteModal(false);
         } catch (error) {
-            console.error("Delete failed:", error);
-            alert("Silme işlemi başarısız oldu.");
+            toast.error("Silme işlemi başarısız oldu.");
+        } finally {
+            setIsDeleting(false);
+        }
+    };
+
+    const handleDeleteCategory = async () => {
+        if (!user || !categoryToDelete) return;
+
+        setIsDeleting(true);
+        try {
+            // Delete all songs in this category
+            const { error: songError } = await supabase
+                .from("Song")
+                .delete()
+                .eq("addedBy", user.id)
+                .eq("Category", categoryToDelete.id);
+
+            if (songError) {
+                toast.error("Şarkılar silinirken hata oluştu!");
+                return;
+            }
+
+            // Delete the category itself
+            const { error: catError } = await supabase
+                .from("Category")
+                .delete()
+                .eq("id", categoryToDelete.id)
+                .eq("user_id", user.id);
+
+            if (catError) {
+                toast.error("Kategori silinirken hata oluştu!");
+                return;
+            }
+
+            // Refresh songs
+            await refetchSongs();
+
+            // Switch to recommended tab
+            setActiveTab("recommended");
+            setCategoryToDelete(null);
+        } catch (error) {
+            toast.error("Silme işlemi başarısız oldu.");
         } finally {
             setIsDeleting(false);
         }
@@ -78,6 +122,11 @@ export default function PlaylistTabs({ recommendedSongs, favoriteSongs, myPlayli
                             {myPlaylistSongs && myPlaylistSongs.length > 0 && (
                                 <option value="myPlaylist">Benim Playlistim ({myPlaylistSongs?.length})</option>
                             )}
+                            {customCategories.map((category) => (
+                                <option key={category.id} value={category.id}>
+                                    {category.name} ({category.songCount})
+                                </option>
+                            ))}
                             {recentlyPlayed.length > 0 && (
                                 <option value="history">Son Çalınanlar</option>
                             )}
@@ -135,6 +184,23 @@ export default function PlaylistTabs({ recommendedSongs, favoriteSongs, myPlayli
                                 Benim Playlistim
                             </button>
                         )}
+
+                        {/* Custom Categories - Dynamic Tabs */}
+                        {customCategories.map((category) => (
+                            <button
+                                key={category.id}
+                                onClick={() => setActiveTab(category.id)}
+                                className={`flex items-center gap-2 px-3 md:px-6 py-2.5 rounded-lg text-xs md:text-sm font-medium transition-all duration-300 ${activeTab === category.id
+                                    ? "bg-orange-600 text-white shadow-lg shadow-orange-500/25"
+                                    : "text-gray-400 hover:text-white hover:bg-white/5"
+                                    }`}
+                            >
+                                <FontAwesomeIcon icon={faListUl} className={activeTab === category.id ? "text-white" : "text-orange-400"} />
+                                {category.name}
+                                <span className="text-[10px] opacity-75">({category.songCount})</span>
+                            </button>
+                        ))}
+
 
                         {recentlyPlayed.length > 0 && (
                             <button
@@ -220,6 +286,31 @@ export default function PlaylistTabs({ recommendedSongs, favoriteSongs, myPlayli
                         />
                     </div>
                 )}
+                {/* Custom Categories - Dynamic Content */}
+                {customCategories.map((category) => (
+                    activeTab === category.id && isLoggedIn && (
+                        <div key={category.id} className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                            <div className="flex items-center justify-between mb-4">
+                                <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+                                    <FontAwesomeIcon icon={faListUl} className="text-orange-400" />
+                                    {category.name}
+                                    <span className="text-sm text-gray-400 font-normal">({category.songCount} şarkı)</span>
+                                </h2>
+                                <button
+                                    onClick={() => setCategoryToDelete(category)}
+                                    className="flex items-center gap-2 px-4 py-2 bg-red-600/20 hover:bg-red-600/40 border border-red-500/30 text-red-400 hover:text-red-300 rounded-lg text-sm font-medium transition-all"
+                                >
+                                    <FontAwesomeIcon icon={faTrash} className="w-3.5 h-3.5" />
+                                    Kategoriyi Sil
+                                </button>
+                            </div>
+                            <SongTable
+                                title=""
+                                songs={category.songs}
+                            />
+                        </div>
+                    )
+                ))}
                 {activeTab === "history" && isLoggedIn && (
                     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
                         <SongTable
@@ -246,7 +337,59 @@ export default function PlaylistTabs({ recommendedSongs, favoriteSongs, myPlayli
                 )}
             </div>
 
-            {/* Delete Confirmation Modal */}
+            {/* Delete Confirmation Modal - Custom Category */}
+            {categoryToDelete && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center">
+                    <div
+                        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+                        onClick={() => setCategoryToDelete(null)}
+                    />
+                    <div className="relative bg-gray-900 border border-white/10 rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6 animate-in fade-in zoom-in-95 duration-200">
+                        <div className="flex items-center gap-4 mb-4">
+                            <div className="w-12 h-12 rounded-full bg-red-500/20 flex items-center justify-center">
+                                <FontAwesomeIcon icon={faExclamationTriangle} className="w-6 h-6 text-red-500" />
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-semibold text-white">Kategoriyi Sil</h3>
+                                <p className="text-sm text-gray-400">Bu işlem geri alınamaz!</p>
+                            </div>
+                        </div>
+
+                        <p className="text-gray-300 mb-6">
+                            <strong>"{categoryToDelete.name}"</strong> kategorisini ve içindeki <strong>{categoryToDelete.songCount}</strong> şarkıyı silmek istediğinizden emin misiniz?
+                            Bu işlem kalıcıdır ve geri alınamaz.
+                        </p>
+
+                        <div className="flex gap-3 justify-end">
+                            <button
+                                onClick={() => setCategoryToDelete(null)}
+                                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-medium transition-colors"
+                            >
+                                İptal
+                            </button>
+                            <button
+                                onClick={handleDeleteCategory}
+                                disabled={isDeleting}
+                                className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white rounded-lg font-medium transition-colors"
+                            >
+                                {isDeleting ? (
+                                    <>
+                                        <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
+                                        Siliniyor...
+                                    </>
+                                ) : (
+                                    <>
+                                        <FontAwesomeIcon icon={faTrash} className="w-4 h-4" />
+                                        Evet, Sil
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Delete Confirmation Modal - myPlaylist */}
             {showDeleteModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center">
                     <div

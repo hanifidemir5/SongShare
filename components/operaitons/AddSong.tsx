@@ -3,11 +3,18 @@ import { getSongInfo } from "@/app/helpers/getSongInfo";
 import { Song } from "@/app/types";
 import { supabase } from "@/lib/supabaseClient";
 import { v4 as uuidv4 } from "uuid";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useSongs } from "../../app/contexts/SongsContext";
 import { searchSpotifyTrackByName } from "@/app/helpers/searchSpotifyTrackByName";
 import { useAuth } from "@/app/contexts/AuthContext";
 import ImportPlaylistModal from "./ImportPlaylistModal";
+import { toast } from "react-toastify";
+
+interface Category {
+  id: string;
+  name: string;
+  user_id: string | null;
+}
 
 function AddSong() {
   const { currentProfile, refetchSongs } = useSongs();
@@ -16,7 +23,8 @@ function AddSong() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [url, setUrl] = useState<string>("");
-  const [category, setCategory] = useState<"recommended" | "favorites" | "myPlaylist">("recommended");
+  const [availableCategories, setAvailableCategories] = useState<Category[]>([]);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>("");
 
   const [isLoading, setIsLoading] = useState(false);
 
@@ -32,16 +40,56 @@ function AddSong() {
     youtubeUrl?: string;
   } | null>(null);
 
+  // Fetch available categories (global + user's custom)
+  useEffect(() => {
+    const fetchCategories = async () => {
+      if (!user) {
+        setAvailableCategories([]);
+        return;
+      }
+
+      let data: Category[] | null = null;
+      try {
+        const { data: fetchedData, error } = await supabase
+          .from('Category')
+          .select('id, name, user_id')
+          .or(`user_id.is.null,user_id.eq.${user.id}`)
+          .order('created_at', { ascending: true });
+
+        if (error) {
+          // Silently handle error
+          return;
+        }
+        data = fetchedData;
+      } catch (error) {
+        // Silently handle error
+        return;
+      }
+
+      setAvailableCategories(data || []);
+
+      // Set default to first global category (recommended)
+      if (data && data.length > 0 && !selectedCategoryId) {
+        const recommended = data.find(cat => cat.name === 'recommended' && !cat.user_id);
+        if (recommended) {
+          setSelectedCategoryId(recommended.id);
+        }
+      }
+    };
+
+    fetchCategories();
+  }, [user]);
+
   // 1. INPUT HANDLER: Decide if URL or Search
   async function handleInitialSubmit() {
     if (!currentProfile) {
-      alert("Bir kullanıcı seçmelisin.");
+      toast.error("Bir kullanıcı seçmelisin.");
       return;
     }
 
     const inputVal = url.trim();
     if (!inputVal) {
-      alert("Lütfen bir şarkı adı veya bağlantı girin.");
+      toast.error("Lütfen bir şarkı adı veya bağlantı girin.");
       return;
     }
 
@@ -57,7 +105,7 @@ function AddSong() {
         // FLOW A: Direct URL -> Get Info -> Preview
         const songInfo = await getSongInfo(inputVal);
         if ((songInfo as any).error) {
-          alert((songInfo as any).error);
+          toast.error((songInfo as any).error);
         } else {
           setPreviewData(songInfo as any);
         }
@@ -67,8 +115,8 @@ function AddSong() {
         setSearchResults(results);
       }
     } catch (error) {
-      console.error(error);
-      alert("İşlem sırasında bir hata oluştu.");
+      // Silently handle error
+      toast.error("İşlem sırasında bir hata oluştu.");
     } finally {
       setIsLoading(false);
     }
@@ -77,7 +125,7 @@ function AddSong() {
   // 2. SELECTION HANDLER (For Search Flow)
   async function handleSelectResult(track: any) {
     if (!track.spotifyUrl) {
-      alert("Bu şarkının Spotify bağlantısı bulunamadı.");
+      toast.error("Bu şarkının Spotify bağlantısı bulunamadı.");
       return;
     }
 
@@ -87,14 +135,14 @@ function AddSong() {
       const songInfo = await getSongInfo(track.spotifyUrl);
 
       if ((songInfo as any).error) {
-        alert((songInfo as any).error);
+        toast.error((songInfo as any).error);
       } else {
         setPreviewData(songInfo as any);
         setSearchResults(null); // Hide list, show preview
       }
     } catch (error) {
-      console.error(error);
-      alert("Şarkı detayları alınamadı.");
+      // Silently handle error
+      toast.error("Şarkı detayları alınamadı.");
     } finally {
       setIsLoading(false);
     }
@@ -103,6 +151,12 @@ function AddSong() {
   // 3. CONFIRM HANDLER (Final Add)
   async function handleConfirm() {
     if (!previewData || !user) return;
+
+    // Validate category selection
+    if (!selectedCategoryId) {
+      toast.error("Lütfen bir kategori seçin!");
+      return;
+    }
 
     // Determing who owns the song: The currently logged in user
     const addedById = user.id;
@@ -114,20 +168,23 @@ function AddSong() {
       youtubeUrl: previewData.youtubeUrl,
       spotifyUrl: previewData.spotifyUrl,
       addedBy: addedById,
-      category,
+      Category: selectedCategoryId,
     };
 
-    const { error } = await supabase.from("Song").insert([newSong]);
+    try {
+      const { error } = await supabase.from("Song").insert([newSong]);
 
-    if (error) {
-      console.error("Şarkı eklenirken hata oluştu:", error);
-      alert("Şarkı eklenemedi!");
+      if (error) {
+        throw error; // Propagate error to catch block
+      }
+    } catch (error) {
+      toast.error("Şarkı eklenirken hata oluştu!");
       return;
     }
 
     // Interactive Feedback
     if (currentProfile?.id !== user.id) {
-      alert("Şarkı kendi listenize eklendi!");
+      toast.success("Şarkı kendi listenize eklendi!");
     }
 
     // Refresh songs instantly in UI
@@ -173,14 +230,15 @@ function AddSong() {
 
               <select
                 className="input w-full"
-                value={category}
-                onChange={(e) =>
-                  setCategory(e.target.value as "recommended" | "favorites" | "myPlaylist")
-                }
+                value={selectedCategoryId}
+                onChange={(e) => setSelectedCategoryId(e.target.value)}
               >
-                <option value="recommended">Şu sıralar dinlediklerim</option>
-                <option value="favorites">Tüm zamanlar favorilerim</option>
-                <option value="myPlaylist">Benim Playlistim</option>
+                <option value="">Kategori Seç...</option>
+                {availableCategories.map((cat) => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.name} {cat.user_id ? '(Özel)' : ''}
+                  </option>
+                ))}
               </select>
 
               <div className="flex gap-2 justify-end">

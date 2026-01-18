@@ -80,6 +80,12 @@ export async function getUserYouTubePlaylists(
         }
 
         const data = await response.json();
+        console.log("DEBUG: YouTube API Response:", data);
+
+        if (!data.items) {
+            console.log("DEBUG: No items in response");
+            return [];
+        }
 
         return data.items.map((item: any) => ({
             id: item.id,

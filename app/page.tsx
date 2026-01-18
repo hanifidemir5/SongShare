@@ -45,6 +45,7 @@ export default function HomePage() {
     topTracks,
     globalTopTracks,
     groupSongs,
+    customCategories,
     profileList,
     currentProfile,
     setCurrentProfile,
@@ -105,6 +106,7 @@ export default function HomePage() {
         recommendedSongs={recommendedSongs}
         favoriteSongs={favoriteSongs}
         myPlaylistSongs={myPlaylistSongs}
+        customCategories={customCategories}
         recentlyPlayed={recentlyPlayed}
         topTracks={topTracks}
         globalTopTracks={globalTopTracks}

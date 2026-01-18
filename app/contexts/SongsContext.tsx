@@ -4,10 +4,18 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabaseClient";
 import { Song, Profile } from "../types";
 
+export interface CustomCategory {
+  id: string;
+  name: string;
+  songs: Song[];
+  songCount: number;
+}
+
 interface SongsContextValue {
   recommendedSongs: Song[];
   favoriteSongs: Song[];
   myPlaylistSongs: Song[];
+  customCategories: CustomCategory[];
   recentlyPlayed: Song[];
   topTracks: Song[];
   globalTopTracks: Song[];
@@ -42,6 +50,33 @@ export const SongsProvider = ({ children }: Props) => {
   const [topTracks, setTopTracks] = React.useState<Song[]>([]);
   const [globalTopTracks, setGlobalTopTracks] = React.useState<Song[]>([]);
   const [groupSongs, setGroupSongs] = React.useState<Song[]>([]);
+  const [customCategories, setCustomCategories] = React.useState<CustomCategory[]>([]);
+  const [globalCategoryIds, setGlobalCategoryIds] = React.useState<{
+    recommended?: string;
+    favorites?: string;
+    myPlaylist?: string;
+  }>({});
+
+  // Fetch global category IDs once
+  const fetchGlobalCategories = async () => {
+    const { data, error } = await supabase
+      .from('Category')
+      .select('id, name')
+      .is('user_id', null);
+
+    if (error || !data) return;
+
+    const ids: any = {};
+    data.forEach((cat: { id: string; name: string }) => {
+      ids[cat.name] = cat.id;
+    });
+    setGlobalCategoryIds(ids);
+  };
+
+  // Fetch global categories on mount
+  React.useEffect(() => {
+    fetchGlobalCategories();
+  }, []);
 
   // Fetch all users once on mount
   const fetchProfiles = async () => {
@@ -102,6 +137,66 @@ export const SongsProvider = ({ children }: Props) => {
 
     } catch (error) {
       console.error("Error fetching group songs:", error);
+    }
+  };
+
+  // Fetch Custom Categories and their songs
+  const fetchCustomCategories = async () => {
+    if (!currentProfile) {
+      setCustomCategories([]);
+      return;
+    }
+
+    try {
+      // 1. Fetch all custom categories for this user
+      const { data: categories, error: catError } = await supabase
+        .from('Category')
+        .select('id, name')
+        .eq('user_id', currentProfile.id)
+        .eq('category_type', 'custom')
+        .order('created_at', { ascending: false });
+
+      if (catError) throw catError;
+
+      if (!categories || categories.length === 0) {
+        setCustomCategories([]);
+        return;
+      }
+
+      // 2. For each category, fetch its songs
+      const categoriesWithSongs: CustomCategory[] = await Promise.all(
+        categories.map(async (cat) => {
+          const { data: songs, error: songError } = await supabase
+            .from('Song')
+            .select('*')
+            .eq('addedBy', currentProfile.id)
+            .eq('Category', cat.id)
+            .order('created_at', { ascending: false });
+
+          if (songError) {
+            console.error(`Error fetching songs for category ${cat.name}:`, songError);
+            return {
+              id: cat.id,
+              name: cat.name,
+              songs: [],
+              songCount: 0,
+            };
+          }
+
+          return {
+            id: cat.id,
+            name: cat.name,
+            songs: songs || [],
+            songCount: songs?.length || 0,
+          };
+        })
+      );
+
+      setCustomCategories(categoriesWithSongs);
+
+    } catch (error) {
+      console.error("Error fetching custom categories:", error);
+      setCustomCategories([]);
     }
   };
 
@@ -298,10 +393,11 @@ export const SongsProvider = ({ children }: Props) => {
     enabled: !!currentProfile, // only fetch if currentUser exists
   });
 
-  // Trigger history and Group fetches when profile changes
+  // Trigger history, Group, and Custom Categories fetches when profile changes
   React.useEffect(() => {
     fetchSpotifyHistory();
     fetchGroupSongs();
+    fetchCustomCategories();
   }, [currentProfile]);
 
   // Fetch global top tracks on mount (for all users including guests)
@@ -310,21 +406,21 @@ export const SongsProvider = ({ children }: Props) => {
   }, []);
 
   const recommendedSongs = songs
-    .filter((s) => s.category === "recommended")
+    .filter((s) => s.Category === globalCategoryIds.recommended)
     .sort(
       (a, b) =>
         new Date(b.created_at ?? 0).getTime() -
         new Date(a.created_at ?? 0).getTime()
     );
   const favoriteSongs = songs
-    .filter((s) => s.category === "favorites")
+    .filter((s) => s.Category === globalCategoryIds.favorites)
     .sort(
       (a, b) =>
         new Date(b.created_at ?? 0).getTime() -
         new Date(a.created_at ?? 0).getTime()
     );
   const myPlaylistSongs = songs
-    .filter((s) => s.category === "myPlaylist")
+    .filter((s) => s.Category === globalCategoryIds.myPlaylist)
     .sort(
       (a, b) =>
         new Date(b.created_at ?? 0).getTime() -
@@ -337,6 +433,7 @@ export const SongsProvider = ({ children }: Props) => {
         recommendedSongs,
         favoriteSongs,
         myPlaylistSongs,
+        customCategories,
         recentlyPlayed,
         topTracks,
         globalTopTracks,

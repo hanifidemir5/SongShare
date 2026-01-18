@@ -9,12 +9,16 @@ export default function SpotifyCallbackPage() {
   const router = useRouter();
   const [loginError, setLoginError] = useState<any>(null);
   useEffect(() => {
+    console.log("[DEBUG] Spotify Callback Page Mounted");
     async function processSpotifyLogin() {
+      console.log("[DEBUG] processSpotifyLogin started");
       // 0. Check for errors in URL
+      console.log("[DEBUG] Step 1: Checking URL for errors");
       if (typeof window !== "undefined") {
         const params = new URLSearchParams(window.location.search);
         const error = params.get("error");
         const errorDesc = params.get("error_description");
+        console.log("[DEBUG] URL params - error:", error, "errorDesc:", errorDesc);
 
         if (error) {
           console.error("Spotify Login Error:", error, errorDesc);
@@ -59,24 +63,44 @@ export default function SpotifyCallbackPage() {
             }
           }
 
+          console.log("[DEBUG] Error found in URL, redirecting to home");
           window.location.href = "/";
           return;
         }
+        console.log("[DEBUG] No URL errors found");
       }
 
+      console.log("[DEBUG] Step 2: Fetching authenticated user");
       try {
-        const { data: authData, error } = await supabase.auth.getUser();
+        console.log("[DEBUG] Calling supabase.auth.getUser() with 10s timeout...");
+
+        // Add timeout to prevent infinite hanging
+        const getUserPromise = supabase.auth.getUser();
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("getUser() timeout after 10 seconds")), 10000)
+        );
+
+        const { data: authData, error } = await Promise.race([
+          getUserPromise,
+          timeoutPromise
+        ]) as any;
+
+        console.log("[DEBUG] getUser() response - error:", error, "user:", authData?.user ? "Found" : "Not found");
 
         if (error || !authData?.user) {
+          console.log("[DEBUG] No user found or error, redirecting home");
           router.replace("/");
           return;
         }
 
         const authUser = authData.user;
+        console.log("[DEBUG] Auth user ID:", authUser.id);
 
         // IDENTITY INTEGRITY CHECK (Session Guard)
+        console.log("[DEBUG] Step 3: Identity integrity check");
         if (typeof window !== "undefined") {
           const expectedUserId = localStorage.getItem("latest_link_user_id");
+          console.log("[DEBUG] Expected user ID:", expectedUserId, "Actual user ID:", authUser.id);
 
           if (expectedUserId && authUser.id !== expectedUserId) {
             console.error("Spotify: SESSION MISMATCH! Logging out.");
@@ -88,21 +112,29 @@ export default function SpotifyCallbackPage() {
           localStorage.removeItem("latest_link_user_id");
         }
 
+        console.log("[DEBUG] Step 4: Getting Spotify identity");
         const spotifyIdentity = authUser.identities?.find(
           (identity) => identity.provider === "spotify"
         );
+        console.log("[DEBUG] Spotify identity found:", spotifyIdentity ? "Yes" : "No");
 
         const spotifyId = spotifyIdentity?.id ?? null;
 
+        console.log("[DEBUG] Step 5: Getting session for tokens");
         const { data, error: sessionError } = await supabase.auth.getSession();
+        console.log("[DEBUG] Session response - error:", sessionError, "session:", data?.session ? "Found" : "Not found");
+
         if (sessionError || !data.session) {
-          console.error("Session alınamadı:", error);
+          console.error("Session alınamadı:", sessionError);
+          console.log("[DEBUG] Session error, returning");
           return;
         }
 
         const providerAccessToken = data?.session.provider_token || null;
         const providerRefreshToken = data?.session.provider_refresh_token || null;
+        console.log("[DEBUG] Provider tokens - access:", providerAccessToken ? "Found" : "Missing", "refresh:", providerRefreshToken ? "Found" : "Missing");
 
+        console.log("[DEBUG] Step 6: Calling handleSpotifyCallback");
         await handleSpotifyCallback({
           id: authUser.id,
           email: authUser.email ?? null,
@@ -111,10 +143,14 @@ export default function SpotifyCallbackPage() {
           spotifyAccessToken: providerAccessToken,
           spotifyRefreshToken: providerRefreshToken,
         });
+        console.log("[DEBUG] handleSpotifyCallback completed successfully");
 
+        console.log("[DEBUG] Step 7: Redirecting to home page");
         window.location.href = "/";
       } catch (error) {
-        console.error("Spotify callback error", error);
+        console.error("[DEBUG] FATAL ERROR in Spotify callback:", error);
+        console.error("[DEBUG] Error stack:", (error as Error).stack);
+        console.log("[DEBUG] Attempting to redirect home after error");
         window.location.href = "/";
       }
     }

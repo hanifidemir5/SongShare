@@ -15,7 +15,7 @@ export default function YouTubeConnectButton() {
       }
     >
       {profile?.is_youtube_connected
-        ? "YouTube'dan Çıkış Yap"
+        ? "YouTube Bağlantısını Kes"
         : "YouTube İle Bağlan"}
     </button>
   );

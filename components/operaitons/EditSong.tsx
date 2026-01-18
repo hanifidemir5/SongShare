@@ -12,7 +12,7 @@ type Props = {
 };
 
 function EditSong({ showUpdateForm, setShowUpdateForm, song }: Props) {
-  const { refetchSongs } = useSongs(); // ✅ refetch after update
+  const { refetchSongs } = useSongs();
 
   const [updateForm, setUpdateForm] = useState<Song>({
     id: song.id,
@@ -39,7 +39,6 @@ function EditSong({ showUpdateForm, setShowUpdateForm, song }: Props) {
     }
   }, [song]);
 
-  // 🔄 Update song in Supabase
   async function handleSubmit() {
     if (!updateForm) return;
 
@@ -62,7 +61,7 @@ function EditSong({ showUpdateForm, setShowUpdateForm, song }: Props) {
       return;
     }
 
-    await refetchSongs(); // ✅ Refresh UI with latest data
+    await refetchSongs();
     setShowUpdateForm(false);
   }
 

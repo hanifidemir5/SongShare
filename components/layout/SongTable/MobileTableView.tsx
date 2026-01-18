@@ -131,7 +131,7 @@ const MobileTableView = ({
             )}
 
             {/* Düzenle — SADECE ÖZ SAHİBİ GÖRÜR ve HISTORY/TOP DEĞİLSE */}
-            {isLoggedIn && currentProfile && profile && currentProfile.id === profile.id && song.category !== 'history' && song.category !== 'topTracks' && song.category !== 'globalTopTracks' && (
+            {isLoggedIn && currentProfile && profile && currentProfile.id === profile.id && song.Category !== 'history' && song.Category !== 'topTracks' && song.Category !== 'globalTopTracks' && (
               <button
                 className="btn !bg-yellow-600 hover:!bg-yellow-500 !px-2 !py-1 text-xs"
                 onClick={() => {
@@ -147,7 +147,7 @@ const MobileTableView = ({
             )}
 
             {/* Sil — SADECE ÖZ SAHİBİ GÖRÜR ve HISTORY/TOP DEĞİLSE */}
-            {isLoggedIn && currentProfile && profile && currentProfile.id === profile.id && song.category !== 'history' && song.category !== 'topTracks' && song.category !== 'globalTopTracks' && (
+            {isLoggedIn && currentProfile && profile && currentProfile.id === profile.id && song.Category !== 'history' && song.Category !== 'topTracks' && song.Category !== 'globalTopTracks' && (
               <button
                 className="btn !bg-red-600 hover:!bg-red-500 !px-2 !py-1 text-xs"
                 onClick={() => song.id && handleDelete(song.id)}

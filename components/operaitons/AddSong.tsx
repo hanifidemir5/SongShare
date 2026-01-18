@@ -48,20 +48,13 @@ function AddSong() {
         return;
       }
 
-      let data: Category[] | null = null;
-      try {
-        const { data: fetchedData, error } = await supabase
-          .from('Category')
-          .select('id, name, user_id')
-          .or(`user_id.is.null,user_id.eq.${user.id}`)
-          .order('created_at', { ascending: true });
+      const { data, error } = await supabase
+        .from('Category')
+        .select('id, name, user_id')
+        .or(`user_id.is.null,user_id.eq.${user.id}`)
+        .order('created_at', { ascending: true });
 
-        if (error) {
-          // Silently handle error
-          return;
-        }
-        data = fetchedData;
-      } catch (error) {
+      if (error) {
         // Silently handle error
         return;
       }
@@ -171,14 +164,10 @@ function AddSong() {
       Category: selectedCategoryId,
     };
 
-    try {
-      const { error } = await supabase.from("Song").insert([newSong]);
+    const { error } = await supabase.from("Song").insert([newSong]);
 
-      if (error) {
-        throw error; // Propagate error to catch block
-      }
-    } catch (error) {
-      toast.error("Şarkı eklenirken hata oluştu!");
+    if (error) {
+      toast.error("Şarkı eklenemedi!");
       return;
     }
 

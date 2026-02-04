@@ -41,23 +41,29 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     const getInitialSession = async () => {
+      console.log("DEBUG: AuthContext - getInitialSession started");
       try {
         const { data } = await supabase.auth.getSession();
         const authUser = data.session?.user ?? null;
+        console.log("DEBUG: AuthContext - Session retrieved", { hasUser: !!authUser, userId: authUser?.id });
 
         setUser(authUser);
         setIsLoggedIn(Boolean(authUser));
 
         if (authUser) {
           try {
+            console.log("DEBUG: AuthContext - Fetching profile for init");
             await fetchProfile(authUser.id);
           } catch (fetchError) {
             console.error("Profile fetch error during init:", fetchError);
           }
+        } else {
+          console.log("DEBUG: AuthContext - No session user found");
         }
       } catch (err) {
         console.error("Auth initialization error:", err);
       } finally {
+        console.log("DEBUG: AuthContext - Setting loading to false");
         setLoading(false);
       }
     };
@@ -73,14 +79,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     getInitialSession();
 
     const { data: subscription } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
+      async (event, session) => {
+        console.log("DEBUG: AuthContext - onAuthStateChange", event);
         const authUser = session?.user ?? null;
 
         setUser(authUser);
         setIsLoggedIn(Boolean(authUser));
 
-        if (authUser) await fetchProfile(authUser.id);
+        if (authUser) {
+          console.log("DEBUG: AuthContext - Fetching profile onAuthStateChange");
+          await fetchProfile(authUser.id);
+        }
         else setProfile(null);
+
+        console.log("DEBUG: AuthContext - onAuthStateChange finished, clearing loading");
+        setLoading(false);
       }
     );
 

@@ -8,17 +8,19 @@
 export async function fetchSpotifyPlaylistTracks(
     playlistId: string,
     accessToken: string,
-    limit: number = 50
+    limit: number = 50,
+    offset: number = 0
 ): Promise<{
     id: string;
     title: string;
     artist: string;
     spotifyUrl: string;
     youtubeUrl?: string;
+    duration?: string;
 }[]> {
     try {
         const response = await fetch(
-            `https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=${limit}`,
+            `https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=${limit}&offset=${offset}`,
             {
                 headers: {
                     Authorization: `Bearer ${accessToken}`,
@@ -41,6 +43,7 @@ export async function fetchSpotifyPlaylistTracks(
                 artist: item.track.artists.map((a: any) => a.name).join(", "),
                 spotifyUrl: item.track.external_urls?.spotify || "",
                 youtubeUrl: undefined, // Will be populated later if needed
+                duration: new Date(item.track.duration_ms).toISOString().slice(14, 19), // format mm:ss
             }));
 
         return tracks;

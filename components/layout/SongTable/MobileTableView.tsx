@@ -1,35 +1,41 @@
 import React from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSpotify, faYoutube } from "@fortawesome/free-brands-svg-icons";
-import { Song } from "@/app/types";
-import { useSongs } from "@/app/contexts/SongsContext";
-import { useAuth } from "@/app/contexts/AuthContext";
+import { Song } from "@/types";
+import { useSongs } from "@/contexts/SongsContext";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface MobileTableProps {
   currentSongs: Song[];
   allSongs?: Song[];
   setSongToAdd: (song: Song) => void;
   setShowPlaylistModal: (show: boolean) => void;
+  setShowPortalModal: (show: boolean) => void;
   setShowUpdateForm: (cb: (prev: boolean) => boolean) => void;
   setEditSong: (song: Song | null) => void;
   handleDelete: (id: string) => void;
   spotifyPlaylists: any[];
   youtubePlaylists: any[];
+  fetchPlaylists: () => Promise<void>;
+  isSystemPlaylist?: boolean;
 }
 
-import { extractSpotifyId, extractYoutubeId } from "@/app/helpers/mediaUtils";
-import { usePlayer, PlaylistItem } from "@/app/contexts/PlayerContext";
+import { extractSpotifyId, extractYoutubeId } from "@/lib/helpers/mediaUtils";
+import { usePlayer, PlaylistItem } from "@/contexts/PlayerContext";
 
 const MobileTableView = ({
   currentSongs,
   allSongs,
   setSongToAdd,
   setShowPlaylistModal,
+  setShowPortalModal,
   setShowUpdateForm,
   setEditSong,
   handleDelete,
   spotifyPlaylists,
   youtubePlaylists,
+  fetchPlaylists,
+  isSystemPlaylist = false,
 }: MobileTableProps) => {
   const { currentProfile } = useSongs();
   const { profile, isLoggedIn } = useAuth();
@@ -104,34 +110,40 @@ const MobileTableView = ({
               <span className="badge text-xs">yok</span>
             )}
 
-            {/* Playlist Ekleme Butonu - History için de gösterilebilir, sonuçta playliste eklemek isteyebilir */}
-            {(profile?.is_spotify_connected && spotifyPlaylists.length > 0) ||
-              (profile?.is_youtube_connected && youtubePlaylists.length > 0) ? (
-              <button
-                className="btn !bg-green-600 hover:!bg-green-500 !px-2 !py-1 text-xs"
-                onClick={() => {
-                  setSongToAdd(song);
-                  setShowPlaylistModal(true);
-                }}
-              >
-                Ekle
-              </button>
+            {/* Dinleme & Ekleme Butonları */}
+            {(profile?.is_spotify_connected || profile?.is_youtube_connected) ? (
+              <div className="flex gap-2">
+                <button
+                  className="btn !bg-indigo-600 hover:!bg-indigo-500 !px-2 !py-1 text-xs"
+                  onClick={() => {
+                    setSongToAdd(song);
+                    fetchPlaylists();
+                    setShowPlaylistModal(true);
+                  }}
+                >
+                  Ekle
+                </button>
+                <button
+                  className="btn !bg-orange-600 hover:!bg-orange-500 !px-2 !py-1 text-xs"
+                  onClick={() => {
+                    setSongToAdd(song);
+                    setShowPortalModal(true);
+                  }}
+                >
+                  Portal+
+                </button>
+              </div>
             ) : (
-              <span className="text-gray-500 text-xs whitespace-nowrap">
-                {profile?.is_youtube_connected &&
-                  !youtubePlaylists?.length ? (
-                  "Youtube Playlisti Yok"
-                ) : profile?.is_spotify_connected &&
-                  !spotifyPlaylists?.length ? (
-                  "Spotify Playlisti Yok"
-                ) : (
-                  "Eklemek için giriş yapın"
-                )}
-              </span>
+              <a
+                href="/settings?highlight=connections"
+                className="btn !bg-gray-800 hover:!bg-gray-700 !px-2 !py-1 text-xs border border-white/10"
+              >
+                <span className="text-gray-400">Bağla</span>
+              </a>
             )}
 
-            {/* Düzenle — SADECE ÖZ SAHİBİ GÖRÜR ve HISTORY/TOP DEĞİLSE */}
-            {isLoggedIn && currentProfile && profile && currentProfile.id === profile.id && song.Category !== 'history' && song.Category !== 'topTracks' && song.Category !== 'globalTopTracks' && (
+            {/* Düzenle — SADECE ÖZ SAHİBİ GÖRÜR ve SYSTEM PLAYLIST DEĞİLSE */}
+            {!isSystemPlaylist && isLoggedIn && currentProfile && profile && currentProfile.id === profile.id && song.playlist_id !== 'history' && song.playlist_id !== 'topTracks' && song.playlist_id !== 'globalTopTracks' && (
               <button
                 className="btn !bg-yellow-600 hover:!bg-yellow-500 !px-2 !py-1 text-xs"
                 onClick={() => {
@@ -146,8 +158,8 @@ const MobileTableView = ({
               </button>
             )}
 
-            {/* Sil — SADECE ÖZ SAHİBİ GÖRÜR ve HISTORY/TOP DEĞİLSE */}
-            {isLoggedIn && currentProfile && profile && currentProfile.id === profile.id && song.Category !== 'history' && song.Category !== 'topTracks' && song.Category !== 'globalTopTracks' && (
+            {/* Sil — SADECE ÖZ SAHİBİ GÖRÜR ve SYSTEM PLAYLIST DEĞİLSE */}
+            {!isSystemPlaylist && isLoggedIn && currentProfile && profile && currentProfile.id === profile.id && song.playlist_id !== 'history' && song.playlist_id !== 'topTracks' && song.playlist_id !== 'globalTopTracks' && (
               <button
                 className="btn !bg-red-600 hover:!bg-red-500 !px-2 !py-1 text-xs"
                 onClick={() => song.id && handleDelete(song.id)}

@@ -3,10 +3,10 @@ import { ReactNode } from "react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./queryclient";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
-import { PlayerProvider } from "./contexts/PlayerContext";
+import { PlayerProvider } from "@/contexts/PlayerContext";
 import SidebarPlayer from "@/components/layout/SidebarPlayer";
-import { SongsProvider } from "./contexts/SongsContext";
-import { AuthProvider } from "./contexts/AuthContext";
+import { SongsProvider } from "@/contexts/SongsContext";
+import { AuthProvider } from "@/contexts/AuthContext";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 

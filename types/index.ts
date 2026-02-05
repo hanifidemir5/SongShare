@@ -5,7 +5,7 @@ export type Song = {
   youtubeUrl: string | undefined;
   spotifyUrl: string | undefined;
   addedBy: string | null | undefined;
-  Category: string | null;  // UUID foreign key to Category.id
+  playlist_id: string | null;  // UUID foreign key to playlist.id
   readonly created_at?: string;
 };
 

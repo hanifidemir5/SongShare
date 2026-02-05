@@ -1,33 +1,36 @@
 import { useEffect, useState, useCallback } from "react";
-import type { Song } from "../../../app/types";
-import { getUserPlaylists as getSpotifyPlaylists } from "@/app/helpers/spotifyApi";
-import { getUserPlaylists as getYouTubePlaylists } from "@/app/helpers/youtubeApi";
+import type { Song } from "@/types";
+import { getUserPlaylists as getSpotifyPlaylists } from "@/lib/helpers/spotifyApi";
+import { getUserPlaylists as getYouTubePlaylists } from "@/lib/helpers/youtubeApi";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faMusic } from "@fortawesome/free-solid-svg-icons";
+import { faMusic, faSpinner } from "@fortawesome/free-solid-svg-icons";
 
-import { useSongs } from "@/app/contexts/SongsContext";
-import EditSong from "../../operaitons/EditSong";
+import { useSongs } from "@/contexts/SongsContext";
+import EditSong from "@/components/operations/EditSong";
 import { supabase } from "@/lib/supabaseClient";
-import { useAuth } from "@/app/contexts/AuthContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "react-toastify";
 import {
   getSpotifyTokens,
   getYouTubeTokens,
-} from "@/app/helpers/getSpotifyToken";
+} from "@/lib/helpers/getSpotifyToken";
 import SongListTable from "./DesktopTableView";
 import MobileTableView from "./MobileTableView";
-import PlaylistModal from "../../operaitons/PlayListModal";
+import PlaylistModal from "@/components/operations/PlayListModal";
+import AddToPortalPlaylistModal from "@/components/operations/AddToPortalPlaylistModal";
 
 type Props = {
   title: string;
   songs: Song[];
+  isSystemPlaylist?: boolean;
 };
 
-export default function SongTable({ title, songs }: Props) {
+export default function SongTable({ title, songs, isSystemPlaylist = false }: Props) {
   const [showPlaylistModal, setShowPlaylistModal] = useState(false);
+  const [showPortalModal, setShowPortalModal] = useState(false);
   const [songToAdd, setSongToAdd] = useState<Song | null>(null);
   const [editSong, setEditSong] = useState<Song | null>();
-  const { isLoading, refetchSongs } = useSongs();
+  const { isLoading, refetchSongs, refreshData } = useSongs();
   const { disconnectYouTube, fetchProfile, profile } = useAuth();
   const [spotifyPlaylists, setSpotifyPlaylists] = useState<any[]>([]);
   const [youtubePlaylists, setYoutubePlaylists] = useState<any[]>([]);
@@ -54,10 +57,12 @@ export default function SongTable({ title, songs }: Props) {
           console.warn(
             "Spotify Access Token alınamadı. Yeniden giriş gerekebilir."
           );
+          toast.warning("Spotify oturumu sona erdi. Lütfen tekrar giriş yapın.");
           setSpotifyPlaylists([]);
         }
       } catch (error) {
         console.error("Spotify oynatma listeleri çekilirken hata:", error);
+        toast.error("Spotify listeleri yüklenemedi.");
       }
     } else {
       // Bağlantı kesikse veya profil yoksa listeyi temizle
@@ -68,8 +73,14 @@ export default function SongTable({ title, songs }: Props) {
     if (profile?.is_youtube_connected) {
       try {
         const { accessToken } = await getYouTubeTokens();
-        const playlists = await getYouTubePlaylists(accessToken);
-        setYoutubePlaylists(playlists);
+        if (accessToken) {
+          const playlists = await getYouTubePlaylists(accessToken);
+          setYoutubePlaylists(playlists);
+        } else {
+          // Token missing or expired (invalid_grant)
+          // Silent fail or optional toast, but set empty to stop loading state
+          setYoutubePlaylists([]);
+        }
       } catch (err) {
         const apiError = err as any;
         const code = apiError?.error?.code;
@@ -99,16 +110,11 @@ export default function SongTable({ title, songs }: Props) {
     }
   }, [profile?.is_spotify_connected, profile?.is_youtube_connected]);
 
-  useEffect(() => {
-    fetchAllPlaylists();
-  }, [
-    profile?.is_spotify_connected,
-    profile?.is_youtube_connected,
-    profile?.id,
-  ]);
+  // Removed useEffect to prevent auto-fetching on every table load.
+  // Playlists will be fetched only when the modal is opened or a playlist is created.
 
   async function deleteSong(id: string) {
-    const { error } = await supabase.from("Song").delete().eq("id", id);
+    const { error } = await supabase.from("song").delete().eq("id", id);
 
     if (error) {
       console.error("Error deleting song:", error);
@@ -121,14 +127,22 @@ export default function SongTable({ title, songs }: Props) {
   async function handleDelete(uuid: string) {
     const success = await deleteSong(uuid);
     if (success) {
-      await refetchSongs();
+      await refreshData();
     }
   }
 
   return (
     <section className="card space-y-4">
       {isLoading ? (
-        <p>Loading songs...</p>
+        <div className="flex flex-col items-center justify-center py-10 text-gray-400">
+          <h2 className="text-xl font-semibold mb-4 self-start w-full text-left text-white">
+            {title}
+          </h2>
+          <div className="flex flex-col items-center justify-center gap-3">
+            <FontAwesomeIcon icon={faSpinner} className="text-3xl text-indigo-400 animate-spin" />
+            <p className="text-sm">Şarkılar yükleniyor...</p>
+          </div>
+        </div>
       ) : songs.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-10 text-gray-500">
           <h2 className="text-xl font-semibold mb-2 self-start w-full text-left">
@@ -149,22 +163,28 @@ export default function SongTable({ title, songs }: Props) {
             allSongs={songs}
             setSongToAdd={setSongToAdd}
             setShowPlaylistModal={setShowPlaylistModal}
+            setShowPortalModal={setShowPortalModal}
             setShowUpdateForm={setShowUpdateForm}
             setEditSong={setEditSong}
             handleDelete={handleDelete}
             spotifyPlaylists={spotifyPlaylists}
             youtubePlaylists={youtubePlaylists}
+            fetchPlaylists={fetchAllPlaylists}
+            isSystemPlaylist={isSystemPlaylist}
           />
           <MobileTableView
             currentSongs={currentSongs}
             allSongs={songs}
             setSongToAdd={setSongToAdd}
             setShowPlaylistModal={setShowPlaylistModal}
+            setShowPortalModal={setShowPortalModal}
             setShowUpdateForm={setShowUpdateForm}
             setEditSong={setEditSong}
             handleDelete={handleDelete}
             spotifyPlaylists={spotifyPlaylists}
             youtubePlaylists={youtubePlaylists}
+            fetchPlaylists={fetchAllPlaylists}
+            isSystemPlaylist={isSystemPlaylist}
           />
         </div>
       )}
@@ -205,115 +225,15 @@ export default function SongTable({ title, songs }: Props) {
         song={songToAdd}
         spotifyPlaylists={spotifyPlaylists}
         youtubePlaylists={youtubePlaylists}
+        onClose={() => setShowPlaylistModal(false)}
         onPlaylistCreated={fetchAllPlaylists}
-        onClose={() => {
-          setShowPlaylistModal(false);
-          setSongToAdd(null);
-        }}
       />
 
-      {/* {showPlaylistModal && songToAdd && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-gray-900 p-6 rounded space-y-4 w-80">
-            <h3 className="text-lg font-semibold">Select Playlist</h3>
-            <select
-              value={selectedPlatformInModal ?? ""}
-              onChange={(e) => setSelectedPlatformInModal(e.target.value)}
-              className="bg-gray-800 text-white w-full rounded px-2 py-1"
-            >
-              <option value="">Select a platform</option>
-              {profile?.is_youtube_connected && (
-                <option key={"youtube"} value={"Youtube"}>
-                  Youtube
-                </option>
-              )}
-              {profile?.is_youtube_connected && (
-                <option key={"spotify"} value={"Spotify"}>
-                  Spotify
-                </option>
-              )}
-            </select>
-
-            {selectedPlatformInModal == "Spotify" && (
-              <select
-                value={selectedPlaylistInModal ?? ""}
-                onChange={(e) => setSelectedPlaylistInModal(e.target.value)}
-                className="bg-gray-800 text-white w-full rounded px-2 py-1"
-              >
-                <option value="">Select a playlist</option>
-                {spotifyPlaylists.map((pl) => (
-                  <option key={pl.id} value={pl.id}>
-                    {pl.name}
-                  </option>
-                ))}
-              </select>
-            )}
-
-            {selectedPlatformInModal == "Youtube" && (
-              <select
-                value={selectedPlaylistInModal ?? ""}
-                onChange={(e) => setSelectedPlaylistInModal(e.target.value)}
-                className="bg-gray-800 text-white w-full rounded px-2 py-1"
-              >
-                <option value="">Select a playlist</option>
-                {youtubePlaylists.map((pl) => (
-                  <option key={pl.id} value={pl.id}>
-                    {pl.title}
-                  </option>
-                ))}
-              </select>
-            )}
-
-            <div className="flex justify-end gap-2">
-              {selectedPlatformInModal == "Spotify" && (
-                <button
-                  className="btn !bg-green-600 hover:!bg-green-500 !px-2 !py-1 text-xs"
-                  onClick={() => {
-                    addToSpotifyPlaylist(
-                      profile?.spotify_token,
-                      songToAdd,
-                      selectedPlaylistInModal
-                    );
-                    setShowPlaylistModal(false);
-                    setSongToAdd(null);
-                    setSelectedPlaylistInModal(null);
-                  }}
-                >
-                  Ekle
-                </button>
-              )}
-              {selectedPlatformInModal == "Youtube" && (
-                <button
-                  className="btn !bg-green-600 hover:!bg-green-500 !px-2 !py-1 text-xs"
-                  onClick={() => {
-                    addToYouTubePlaylist(
-                      profile?.youtube_token,
-                      songToAdd,
-                      selectedPlaylistInModal
-                    );
-                    setShowPlaylistModal(false);
-                    setSongToAdd(null);
-                    setSelectedPlaylistInModal(null);
-                  }}
-                >
-                  Ekle
-                </button>
-              )}
-              <button
-                className="btn !bg-gray-600 hover:!bg-gray-500 !px-2 !py-1 text-xs"
-                onClick={() => {
-                  setShowPlaylistModal(false);
-                  setSongToAdd(null);
-                  setSelectedPlaylistInModal(null);
-                  setSelectedPlatformInModal(null);
-                }}
-              >
-                İptal
-              </button>
-            </div>
-          </div>
-        </div>
-      )} */}
+      <AddToPortalPlaylistModal
+        isOpen={showPortalModal}
+        onClose={() => setShowPortalModal(false)}
+        song={songToAdd}
+      />
     </section>
   );
 }

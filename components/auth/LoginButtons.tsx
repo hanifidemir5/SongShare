@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import SpotifyConnectButton from "./SpotifyConnectButton";
-import { useAuth } from "@/app/contexts/AuthContext";
+import { useAuth } from "@/contexts/AuthContext";
 import YouTubeConnectButton from "./YoutubeConnectButton";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faChevronDown, faUser } from "@fortawesome/free-solid-svg-icons";
@@ -11,7 +11,12 @@ export default function LoginButtons() {
   const [isOpen, setIsOpen] = useState(false);
   const { loading, isLoggedIn, logout, profile } = useAuth();
 
-  if (loading) return <div className="text-white text-xs animate-pulse">Yükleniyor...</div>;
+  if (loading) {
+    console.log("DEBUG: LoginButtons - Still loading...");
+    return <div className="text-white text-xs animate-pulse">Yükleniyor...</div>;
+  }
+
+  // console.log("DEBUG: LoginButtons - Rendered", { isLoggedIn, profileName: profile?.name });
 
   return (
     <div className="relative inline-block text-left z-50">
@@ -76,14 +81,9 @@ export default function LoginButtons() {
             ) : (
               <div className="space-y-1">
                 <p className="text-xs font-semibold text-gray-400 px-2 py-1 uppercase tracking-wider">
-                  Bağlı Hesaplar
+                  Hesap İşlemleri
                 </p>
-                <div className="space-y-2 mb-3">
-                  <SpotifyConnectButton />
-                  <YouTubeConnectButton />
-                </div>
 
-                <div className="h-px bg-white/10 my-2" />
 
                 <button
                   className="w-full text-left px-3 py-2.5 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors text-sm font-medium flex items-center gap-2"

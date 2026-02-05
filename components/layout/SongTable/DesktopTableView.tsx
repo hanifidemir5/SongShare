@@ -1,9 +1,9 @@
 import React from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSpotify, faYoutube } from "@fortawesome/free-brands-svg-icons";
-import { useSongs } from "@/app/contexts/SongsContext";
-import { useAuth } from "@/app/contexts/AuthContext";
-import { Song } from "@/app/types";
+import { useSongs } from "@/contexts/SongsContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { Song } from "@/types";
 
 type Playlist = {
   id: string;
@@ -17,26 +17,32 @@ interface DesktopTableProps {
   youtubePlaylists?: Playlist[] | null;
   setSongToAdd: (song: Song) => void;
   setShowPlaylistModal: (value: boolean) => void;
+  setShowPortalModal: (value: boolean) => void;
 
   setShowUpdateForm: React.Dispatch<React.SetStateAction<boolean>>;
   setEditSong: (song: Song | null) => void;
 
   handleDelete: (id: string) => void;
+  fetchPlaylists: () => Promise<void>;
+  isSystemPlaylist?: boolean;
 }
 
-import { extractSpotifyId, extractYoutubeId } from "@/app/helpers/mediaUtils";
-import { usePlayer, PlaylistItem } from "@/app/contexts/PlayerContext";
+import { extractSpotifyId, extractYoutubeId } from "@/lib/helpers/mediaUtils";
+import { usePlayer, PlaylistItem } from "@/contexts/PlayerContext";
 
 const DesktopTableView: React.FC<DesktopTableProps> = ({
   currentSongs,
   allSongs,
   setSongToAdd,
   setShowPlaylistModal,
+  setShowPortalModal,
   setShowUpdateForm,
   setEditSong,
   handleDelete,
   spotifyPlaylists,
   youtubePlaylists,
+  fetchPlaylists,
+  isSystemPlaylist = false,
 }) => {
   const { currentProfile } = useSongs();
   const { profile, isLoggedIn } = useAuth();
@@ -128,32 +134,46 @@ const DesktopTableView: React.FC<DesktopTableProps> = ({
 
               <td className="p-3">
                 <div className="flex items-center gap-2">
-                  {(profile?.is_spotify_connected && spotifyPlaylists?.length) ||
-                    (profile?.is_youtube_connected && youtubePlaylists?.length) ? (
-                    <button
-                      className="btn !bg-indigo-600 hover:!bg-indigo-500 !px-3 !py-1.5 text-xs font-medium rounded-lg"
-                      onClick={() => {
-                        setSongToAdd(song);
-                        setShowPlaylistModal(true);
-                      }}
-                    >
-                      Ekle
-                    </button>
+                  {/* Logic: 
+                      1. Check if connected to EITHER platform globally (profile.is_X_connected).
+                      2. If connected, show "Ekle" -> updates state + fetches playlists (lazy).
+                      3. If NOT connected, show "Bağla" -> redirects to settings.
+                  */}
+                  {(profile?.is_spotify_connected || profile?.is_youtube_connected) ? (
+                    <>
+                      <button
+                        className="btn !bg-indigo-600 hover:!bg-indigo-500 !px-3 !py-1.5 text-xs font-medium rounded-lg"
+                        onClick={() => {
+                          setSongToAdd(song);
+                          fetchPlaylists(); // Lazy fetch
+                          setShowPlaylistModal(true);
+                        }}
+                        title="Platform'a Ekle (Spotify/YouTube)"
+                      >
+                        Ekle
+                      </button>
+                      <button
+                        className="btn !bg-orange-600 hover:!bg-orange-500 !px-3 !py-1.5 text-xs font-medium rounded-lg"
+                        onClick={() => {
+                          setSongToAdd(song);
+                          setShowPortalModal(true);
+                        }}
+                        title="Portal Playlist'ine Ekle"
+                      >
+                        Portal+
+                      </button>
+                    </>
                   ) : (
-                    <span className="text-gray-500 text-[10px] italic">
-                      {profile?.is_youtube_connected &&
-                        !youtubePlaylists?.length ? (
-                        "Youtube Playlisti Yok"
-                      ) : profile?.is_spotify_connected &&
-                        !spotifyPlaylists?.length ? (
-                        "Spotify Playlisti Yok"
-                      ) : (
-                        "Giriş Gerekli"
-                      )}
-                    </span>
+                    <a
+                      href="/settings?highlight=connections"
+                      className="btn !bg-gray-800 hover:!bg-gray-700 !px-3 !py-1.5 text-xs font-medium rounded-lg border border-white/10 flex items-center gap-1"
+                    >
+                      <span className="text-gray-400">Platf. Bağla</span>
+                    </a>
                   )}
 
-                  {isLoggedIn && currentProfile && profile && currentProfile.id === profile.id && song.Category !== 'history' && song.Category !== 'topTracks' && song.Category !== 'globalTopTracks' && (
+                  {/* Actions for User-Owned Songs (Edit/Delete) - BUT NOT for system playlists */}
+                  {!isSystemPlaylist && isLoggedIn && currentProfile && profile && currentProfile.id === profile.id && song.playlist_id !== 'history' && song.playlist_id !== 'topTracks' && song.playlist_id !== 'globalTopTracks' && (
                     <>
                       <button
                         className="btn !bg-gray-700 hover:!bg-gray-600 !px-2 !py-1.5 text-xs rounded-lg"

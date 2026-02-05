@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { handleSpotifyCallback } from "@/app/services/auth/spotify/handleSpotifyCallback";
+import { handleSpotifyCallback } from "@/lib/services/auth/spotify/handleSpotifyCallback";
 import { supabase } from "@/lib/supabaseClient";
 
 export default function SpotifyCallbackPage() {
@@ -114,7 +114,7 @@ export default function SpotifyCallbackPage() {
 
         console.log("[DEBUG] Step 4: Getting Spotify identity");
         const spotifyIdentity = authUser.identities?.find(
-          (identity) => identity.provider === "spotify"
+          (identity: { provider: string; id: string }) => identity.provider === "spotify"
         );
         console.log("[DEBUG] Spotify identity found:", spotifyIdentity ? "Yes" : "No");
 

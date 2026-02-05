@@ -1,5 +1,5 @@
 import { supabase } from "@/lib/supabaseClient";
-import { saveUserToken } from "@/app/helpers/tokenManager";
+import { saveUserToken } from "@/lib/helpers/tokenManager";
 
 export async function handleYouTubeCallback(authUser: {
   id: string;

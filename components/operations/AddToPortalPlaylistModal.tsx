@@ -1,8 +1,8 @@
 
 import React, { useState, useEffect } from "react";
-import { Song } from "@/app/types";
-import { useSongs } from "@/app/contexts/SongsContext";
-import { useAuth } from "@/app/contexts/AuthContext";
+import { Song } from "@/types";
+import { useSongs } from "@/contexts/SongsContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabaseClient";
 import { toast } from "react-toastify";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -85,12 +85,36 @@ export default function AddToPortalPlaylistModal({ isOpen, onClose, song }: AddT
         setIsLoading(true);
 
         try {
+            // Enrich song with YouTube URL if missing
+            let youtubeUrl = song.youtubeUrl;
+            if (!youtubeUrl && song.spotifyUrl) {
+                try {
+                    const { getYouTubeIdFromSpotifyUrl } = await import("@/lib/helpers/getYouTubeUrlFromSpotify");
+                    const { getSpotifyTokens } = await import("@/lib/helpers/getSpotifyToken");
+                    const { accessToken } = await getSpotifyTokens();
+                    const youtubeApiKey = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
+
+                    if (accessToken) {
+                        const youtubeId = await getYouTubeIdFromSpotifyUrl(
+                            song.spotifyUrl,
+                            accessToken,
+                            youtubeApiKey
+                        );
+                        if (youtubeId) {
+                            youtubeUrl = `https://www.youtube.com/watch?v=${youtubeId}`;
+                        }
+                    }
+                } catch (err) {
+                    console.warn("Could not fetch YouTube URL:", err);
+                }
+            }
+
             // Create a copy of the song for the new category
             const newSong: Song = {
                 id: uuidv4(),
                 title: song.title,
                 artist: song.artist,
-                youtubeUrl: song.youtubeUrl,
+                youtubeUrl: youtubeUrl,
                 spotifyUrl: song.spotifyUrl,
                 addedBy: user.id, // User owns this entry
                 playlist_id: selectedCategoryId,

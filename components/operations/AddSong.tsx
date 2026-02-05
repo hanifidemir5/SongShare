@@ -1,19 +1,23 @@
 "use client";
-import { getSongInfo } from "@/app/helpers/getSongInfo";
-import { Song } from "@/app/types";
+import { getSongInfo } from "@/lib/helpers/getSongInfo";
+import { Song } from "@/types";
 import { supabase } from "@/lib/supabaseClient";
 import { v4 as uuidv4 } from "uuid";
 import React, { useState, useEffect } from "react";
-import { useSongs } from "../../app/contexts/SongsContext";
-import { searchSpotifyTrackByName } from "@/app/helpers/searchSpotifyTrackByName";
-import { useAuth } from "@/app/contexts/AuthContext";
+import { useSongs } from "@/contexts/SongsContext";
+import { searchSpotifyTrackByName } from "@/lib/helpers/searchSpotifyTrackByName";
+import { useAuth } from "@/contexts/AuthContext";
 import ImportPlaylistModal from "./ImportPlaylistModal";
 import { toast } from "react-toastify";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSpinner } from "@fortawesome/free-solid-svg-icons";
-import { createSpotifyPlaylist } from "@/app/helpers/createSpotifyPlaylist";
-import { createYouTubePlaylist } from "@/app/helpers/createYouTubePlaylist";
-import { getSpotifyTokens, getYouTubeTokens } from "@/app/helpers/getSpotifyToken";
+import { faSpinner, faChevronDown } from "@fortawesome/free-solid-svg-icons";
+import { createSpotifyPlaylist } from "@/lib/helpers/createSpotifyPlaylist";
+import { createYouTubePlaylist } from "@/lib/helpers/createYouTubePlaylist";
+import { getSpotifyTokens, getYouTubeTokens } from "@/lib/helpers/getSpotifyToken";
+import MovePlaylistModal from "./MovePlaylistModal";
+import ExportPlaylistModal from "./ExportPlaylistModal";
+import PlatformSelector from "../PlatformSelector";
+import { faTimes } from "@fortawesome/free-solid-svg-icons";
 
 interface Category {
   id: string;
@@ -22,12 +26,16 @@ interface Category {
 }
 
 function AddSong() {
-  const { currentProfile, refetchSongs } = useSongs();
+  const { currentProfile, refetchSongs, refreshData } = useSongs();
   const { isLoggedIn, user } = useAuth();
 
   const [showAddForm, setShowAddForm] = useState(false);
+  const [showActionsDropdown, setShowActionsDropdown] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [showCreateCategoryModal, setShowCreateCategoryModal] = useState(false);
   const [showCreatePlaylistModal, setShowCreatePlaylistModal] = useState(false);
+  const [showMovePlaylistModal, setShowMovePlaylistModal] = useState(false);
   const [url, setUrl] = useState<string>("");
   const [availableCategories, setAvailableCategories] = useState<Category[]>([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>("");
@@ -55,7 +63,7 @@ function AddSong() {
       }
 
       const { data, error } = await supabase
-        .from('Category')
+        .from('playlist')
         .select('id, name, user_id')
         .or(`user_id.is.null,user_id.eq.${user.id}`)
         .order('created_at', { ascending: true });
@@ -167,10 +175,10 @@ function AddSong() {
       youtubeUrl: previewData.youtubeUrl,
       spotifyUrl: previewData.spotifyUrl,
       addedBy: addedById,
-      Category: selectedCategoryId,
+      playlist_id: selectedCategoryId,
     };
 
-    const { error } = await supabase.from("Song").insert([newSong]);
+    const { error } = await supabase.from("song").insert([newSong]);
 
     if (error) {
       toast.error("Şarkı eklenemedi!");
@@ -207,11 +215,13 @@ function AddSong() {
     // If user typed a search, 'url' state still has the text, so they can search again easily.
   };
 
+  // ... (previous code)
+
   return (
     <div>
       {showAddForm ? (
         <div className="space-y-4 p-4 border border-white/10 rounded-xl bg-gray-900/50 backdrop-blur-sm">
-
+          {/* ... (input form code) ... */}
           {/* STATE 1: INPUT FORM (Show if no preview and no search results) */}
           {!previewData && !searchResults && (
             <div className="space-y-4">
@@ -254,6 +264,7 @@ function AddSong() {
             </div>
           )}
 
+          {/* ... (rest of form states) ... */}
           {/* STATE 2: SEARCH RESULTS LIST */}
           {searchResults && !previewData && (
             <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2">
@@ -352,25 +363,84 @@ function AddSong() {
             <div className="flex flex-row flex-wrap gap-4 justify-between">
               <div className="flex gap-4">
                 <button className="btn" onClick={() => setShowAddForm(true)}>
-                  Link ile Şarkı Ekle
-                </button>
-                <button className="btn" onClick={() => setShowAddForm(true)}>
-                  Arama ile Şarkı Ekle
-                </button>
-                <button
-                  className="btn !bg-purple-600 hover:!bg-purple-500"
-                  onClick={() => setShowImportModal(true)}
-                >
-                  Playlist Ekle
+                  Şarkı Ekle
                 </button>
               </div>
-              <button
-                className="btn !bg-indigo-600 hover:!bg-indigo-500"
-                onClick={() => setShowCreatePlaylistModal(true)}
-                title="Yeni Playlist Oluştur"
-              >
-                + Playlist Oluştur
-              </button>
+              <div className="relative">
+                <button
+                  className="btn bg-gray-700 hover:bg-gray-600 flex items-center gap-2"
+                  onClick={() => setShowActionsDropdown(!showActionsDropdown)}
+                >
+                  İşlemler
+                  <FontAwesomeIcon icon={faChevronDown} className={`text-xs transition-transform ${showActionsDropdown ? 'rotate-180' : ''}`} />
+                </button>
+
+                {showActionsDropdown && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-10"
+                      onClick={() => setShowActionsDropdown(false)}
+                    ></div>
+                    <div className="absolute right-0 top-full mt-2 w-56 bg-gray-800 border border-gray-700 rounded-lg shadow-xl z-20 overflow-hidden py-1">
+                      <button
+                        className="w-full text-left px-4 py-2 text-sm text-gray-200 hover:bg-gray-700 flex items-center gap-2"
+                        onClick={() => {
+                          setShowCreateCategoryModal(true);
+                          setShowActionsDropdown(false);
+                        }}
+                      >
+                        <span className="text-orange-500 text-lg leading-none">+</span> Portal Playlist Oluştur
+                      </button>
+
+                      <button
+                        className="w-full text-left px-4 py-2 text-sm text-gray-200 hover:bg-gray-700 flex items-center gap-2"
+                        onClick={() => {
+                          setShowCreatePlaylistModal(true);
+                          setShowActionsDropdown(false);
+                        }}
+                      >
+                        <span className="text-indigo-500 text-lg leading-none">+</span> Platform Playlist Oluştur
+                      </button>
+
+                      <div className="h-px bg-gray-700 my-1"></div>
+
+                      <button
+                        className="w-full text-left px-4 py-2 text-sm text-gray-200 hover:bg-gray-700"
+                        onClick={() => {
+                          setShowMovePlaylistModal(true);
+                          setShowActionsDropdown(false);
+                        }}
+                      >
+                        Platformlar Arası Taşı
+                      </button>
+
+                      <button
+                        className="w-full text-left px-4 py-2 text-sm text-gray-200 hover:bg-gray-700"
+                        onClick={() => {
+                          setShowExportModal(true);
+                          setShowActionsDropdown(false);
+                        }}
+                      >
+                        Playlist .csv İndir
+                      </button>
+
+                      <div className="h-px bg-gray-700 my-1"></div>
+
+                      <button
+                        className="w-full text-left px-4 py-2 text-sm text-gray-200 hover:bg-gray-700"
+                        onClick={() => {
+                          setShowImportModal(true);
+                          setShowActionsDropdown(false);
+                        }}
+                      >
+                        Platform'dan Playlist Ekle
+                      </button>
+
+
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
           ) : (
             <div className="flex flex-row gap-4 justify-end">
@@ -383,10 +453,24 @@ function AddSong() {
       )}
 
 
+      {/* Move Playlist Modal */}
+      {/* Move Playlist Modal */}
+      <MovePlaylistModal
+        isOpen={showMovePlaylistModal}
+        onClose={() => setShowMovePlaylistModal(false)}
+      />
+
       {/* Import Playlist Modal */}
       <ImportPlaylistModal
         isOpen={showImportModal}
         onClose={() => setShowImportModal(false)}
+      />
+
+      {/* Export Playlist Modal */}
+      {/* Export Playlist Modal */}
+      <ExportPlaylistModal
+        isOpen={showExportModal}
+        onClose={() => setShowExportModal(false)}
       />
 
       {/* Create Playlist Modal */}
@@ -395,6 +479,144 @@ function AddSong() {
           onClose={() => setShowCreatePlaylistModal(false)}
         />
       )}
+
+      {/* Create Category (Portal Playlist) Modal */}
+      {showCreateCategoryModal && (
+        <CreateCategoryModal
+          onClose={() => setShowCreateCategoryModal(false)}
+          onSuccess={async (newCategory) => {
+            setShowCreateCategoryModal(false);
+            if (newCategory) {
+              setAvailableCategories(prev => [...prev, newCategory]);
+              setSelectedCategoryId(newCategory.id);
+              await refreshData(); // Refresh global context
+            }
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+// Create Category (Portal Playlist) Modal Component
+function CreateCategoryModal({ onClose, onSuccess }: { onClose: () => void, onSuccess: (cat: Category) => void }) {
+  const { user } = useAuth();
+  const [name, setName] = useState("");
+  const [isCreating, setIsCreating] = useState(false);
+
+  const handleCreate = async () => {
+
+    if (!name.trim()) {
+      toast.error("Lütfen bir isim girin");
+      return;
+    }
+
+    if (!user) {
+      console.error("User is missing in CreateCategoryModal");
+      toast.error("Oturum açmanız gerekiyor.");
+      return;
+    }
+
+    setIsCreating(true);
+    const newId = uuidv4();
+    const payload = {
+      id: newId,
+      name: name.trim(),
+      user_id: user.id,
+      category_type: 'custom'
+    };
+    console.log("DEBUG: Portal Playlist Creation Payload:", payload);
+
+    try {
+      // Create a promise that rejects after 10 seconds to prevent hanging
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Request timed out")), 10000)
+      );
+
+      const dbPromise = supabase
+        .from('playlist')
+        .insert([
+          {
+            id: newId,
+            name: name.trim(),
+            user_id: user.id,
+            category_type: 'custom',
+            subtitle: '',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          }
+        ])
+        .select();
+
+      // Race the DB request against the timeout
+      const result: any = await Promise.race([dbPromise, timeoutPromise]);
+      const { error } = result;
+
+      if (error) {
+        console.error("Create category error (Supabase):", error);
+        toast.error("Oluşturulamadı: " + error.message);
+        return;
+      }
+
+
+      toast.success("Portal Playlist oluşturuldu!");
+
+      // Call onSuccess to close modal and update state
+      onSuccess({
+        id: newId,
+        name: name.trim(),
+        user_id: user.id
+      });
+
+    } catch (err: any) {
+      console.error("Unexpected error in handleCreate:", err);
+      toast.error("Bir hata oluştu: " + (err.message || err));
+    } finally {
+      if (document.body.contains(document.getElementById('create-cat-btn'))) {
+        setIsCreating(false);
+      } else {
+        // Component might be unmounting due to onSuccess closing the modal
+        // which is fine, but good to note.
+        setIsCreating(false);
+      }
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div className="bg-gray-900 p-6 rounded-lg space-y-4 w-96 border border-gray-700">
+        <h3 className="text-lg font-semibold">Yeni Portal Playlist</h3>
+        <p className="text-xs text-gray-400">
+          Sadece bu uygulama içinde yaşayacak yeni bir kategori oluşturun.
+        </p>
+
+        <input
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && !isCreating && handleCreate()}
+          placeholder="Playlist adı..."
+          className="input w-full bg-gray-800 text-white rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500"
+          autoFocus
+        />
+
+        <div className="flex gap-2 justify-end">
+          <button
+            onClick={handleCreate}
+            disabled={isCreating || !name.trim()}
+            className="btn bg-orange-600 hover:bg-orange-500 disabled:opacity-50 px-4 py-2 flex items-center gap-2"
+          >
+            {isCreating && <FontAwesomeIcon icon={faSpinner} className="animate-spin" />}
+            {isCreating ? "Oluşturuluyor..." : "Oluştur"}
+          </button>
+          <button
+            onClick={onClose}
+            className="btn bg-gray-600 hover:bg-gray-500 px-4 py-2"
+          >
+            İptal
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -451,88 +673,66 @@ function CreatePlaylistModal({ onClose }: { onClose: () => void }) {
           toast.error("Playlist oluşturulamadı");
         }
       }
-    } catch (error: any) {
-      const errorReason = error?.error?.errors?.[0]?.reason || "";
-
-      if (errorReason === "youtubeSignupRequired") {
-        toast.error(
-          <div>
-            <p><strong>YouTube Kanalı Gerekli!</strong></p>
-            <p>Playlist oluşturmak için YouTube kanalınız olmalı.</p>
-            <a href="https://www.youtube.com/create_channel" target="_blank" rel="noopener noreferrer">
-              → Kanal Oluştur
-            </a>
-          </div>,
-          { autoClose: 10000 }
-        );
-      } else {
-        toast.error("Bir hata oluştu");
-      }
+    } catch (err) {
+      toast.error("Bir hata oluştu");
     } finally {
       setIsCreating(false);
     }
   };
 
-  const getButtonColor = () => {
-    if (!selectedPlatform) return "bg-gray-600";
-    return selectedPlatform === "Spotify" ? "bg-green-600 hover:bg-green-500" : "bg-red-600 hover:bg-red-500";
-  };
-
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-gray-900 p-6 rounded-lg space-y-4 w-96 border border-gray-700">
-        <h3 className="text-lg font-semibold">Yeni Playlist Oluştur</h3>
+      <div className="bg-gray-900 p-6 rounded-2xl w-[500px] border border-gray-700 shadow-xl space-y-6">
+        <div className="flex justify-between items-center">
+          <h3 className="text-xl font-bold text-white">Platform Playlist Oluştur</h3>
+          <button onClick={onClose}>
+            <FontAwesomeIcon icon={faTimes} className="text-gray-400 hover:text-white" />
+          </button>
+        </div>
 
-        {/* Platform Selection */}
-        <select
-          value={selectedPlatform}
-          onChange={(e) => setSelectedPlatform(e.target.value as "Spotify" | "YouTube")}
-          className="input w-full bg-gray-800 text-white rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-        >
-          <option value="">Platform Seç...</option>
-          {hasSpotify && <option value="Spotify">Spotify</option>}
-          {hasYouTube && <option value="YouTube">YouTube</option>}
-        </select>
+        {!selectedPlatform ? (
+          <PlatformSelector
+            onSelect={(p) => setSelectedPlatform(p === "spotify" ? "Spotify" : "YouTube")}
+            showSpotify={!!profile?.is_spotify_connected}
+            showYoutube={!!profile?.is_youtube_connected}
+          />
+        ) : (
+          <div className="space-y-4 animate-in fade-in zoom-in duration-300">
+            <div className="flex items-center gap-3 text-sm text-gray-400 mb-2">
+              <button onClick={() => setSelectedPlatform("")} className="hover:text-white underline">Platform Seçimi</button>
+              <span>/</span>
+              <span className="text-white font-medium">{selectedPlatform}</span>
+            </div>
 
-        <input
-          type="text"
-          value={playlistName}
-          onChange={(e) => setPlaylistName(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && !isCreating && handleCreate()}
-          placeholder="Playlist adı girin..."
-          className="input w-full bg-gray-800 text-white rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          disabled={!selectedPlatform}
-        />
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">PLAYLIST ADI</label>
+              <input
+                type="text"
+                value={playlistName}
+                onChange={(e) => setPlaylistName(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && !isCreating && handleCreate()}
+                placeholder="Playlist adı..."
+                className="w-full bg-[#2a2a2a] border border-transparent focus:border-[#1DB954] focus:bg-[#333] rounded-lg px-4 py-3 text-white outline-none transition-all placeholder-gray-500 font-medium"
+                autoFocus
+              />
+            </div>
 
-
-        {/* Action Buttons - Only show if platforms are connected */}
-        {(hasSpotify || hasYouTube) && (
-          <div className="flex gap-2 justify-end">
             <button
               onClick={handleCreate}
-              disabled={isCreating || !playlistName.trim() || !selectedPlatform}
-              className={`btn ${getButtonColor()} disabled:opacity-50 disabled:cursor-not-allowed px-4 py-2 flex items-center gap-2`}
+              disabled={isCreating || !playlistName.trim()}
+              className={`w-full py-3 rounded-xl text-white font-bold transition-all shadow-lg ${selectedPlatform === "Spotify"
+                ? "bg-[#1DB954] hover:bg-[#1ed760] text-black shadow-[#1DB954]/20"
+                : "bg-[#FF0000] hover:bg-[#ff3333] shadow-[#FF0000]/20"
+                } disabled:opacity-50 disabled:cursor-not-allowed`}
             >
-              {isCreating && <FontAwesomeIcon icon={faSpinner} className="animate-spin" />}
-              {isCreating ? "Oluşturuluyor..." : "Oluştur"}
-            </button>
-            <button
-              onClick={onClose}
-              className="btn bg-gray-600 hover:bg-gray-500 px-4 py-2"
-            >
-              İptal
-            </button>
-          </div>
-        )}
-
-        {/* Close button when no platforms connected */}
-        {!hasSpotify && !hasYouTube && (
-          <div className="flex justify-end">
-            <button
-              onClick={onClose}
-              className="btn bg-gray-600 hover:bg-gray-500 px-4 py-2"
-            >
-              Kapat
+              {isCreating ? (
+                <>
+                  <FontAwesomeIcon icon={faSpinner} className="animate-spin mr-2" />
+                  Oluşturuluyor...
+                </>
+              ) : (
+                "Oluştur"
+              )}
             </button>
           </div>
         )}

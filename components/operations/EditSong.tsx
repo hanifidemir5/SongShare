@@ -1,8 +1,8 @@
 "use client";
-import { Song } from "@/app/types";
+import { Song } from "@/types";
 import { supabase } from "@/lib/supabaseClient";
 import React, { useEffect, useState } from "react";
-import { useSongs } from "@/app/contexts/SongsContext";
+import { useSongs } from "@/contexts/SongsContext";
 import { toast } from "react-toastify";
 
 type Props = {
@@ -21,7 +21,7 @@ function EditSong({ showUpdateForm, setShowUpdateForm, song }: Props) {
     youtubeUrl: song.youtubeUrl || "",
     spotifyUrl: song.spotifyUrl || "",
     addedBy: song.addedBy,
-    Category: song.Category,
+    playlist_id: song.playlist_id,
   });
 
   // Keep local state in sync if song prop changes
@@ -34,7 +34,7 @@ function EditSong({ showUpdateForm, setShowUpdateForm, song }: Props) {
         youtubeUrl: song.youtubeUrl || "",
         spotifyUrl: song.spotifyUrl || "",
         addedBy: song.addedBy,
-        Category: song.Category,
+        playlist_id: song.playlist_id,
       });
     }
   }, [song]);
@@ -44,7 +44,7 @@ function EditSong({ showUpdateForm, setShowUpdateForm, song }: Props) {
 
     try {
       const { error } = await supabase
-        .from("Song")
+        .from("song")
         .update({
           title: updateForm.title,
           artist: updateForm.artist,

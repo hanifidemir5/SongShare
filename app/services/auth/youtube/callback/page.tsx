@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
-import { handleYouTubeCallback } from "../handleYoutubeCallback";
+import { handleYouTubeCallback } from "@/lib/services/auth/youtube/handleYoutubeCallback";
 import { toast } from "react-toastify";
 
 export default function YouTubeCallbackPage() {

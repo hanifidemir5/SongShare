@@ -3,16 +3,16 @@ import React, { useState, useEffect } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSpotify, faYoutube } from "@fortawesome/free-brands-svg-icons";
 import { faTimes, faArrowLeft, faExchangeAlt, faCheck, faExclamationTriangle, faListCheck, faMusic } from "@fortawesome/free-solid-svg-icons";
-import { useAuth } from "@/app/contexts/AuthContext";
-import { getUserPlaylists } from "@/app/helpers/spotifyApi";
-import { fetchSpotifyPlaylistTracks } from "@/app/helpers/fetchSpotifyPlaylistTracks";
-import { fetchYouTubePlaylistTracks, getUserYouTubePlaylists } from "@/app/helpers/fetchYouTubePlaylistTracks";
-import { createSpotifyPlaylist } from "@/app/helpers/createSpotifyPlaylist";
-import { createYouTubePlaylist } from "@/app/helpers/createYouTubePlaylist";
-import { addToSpotifyPlaylist } from "@/app/helpers/addToSpotifyPlaylist";
-import { addToYouTubePlaylist } from "@/app/helpers/addToYoutubePlaylist";
+import { useAuth } from "@/contexts/AuthContext";
+import { getUserPlaylists } from "@/lib/helpers/spotifyApi";
+import { fetchSpotifyPlaylistTracks } from "@/lib/helpers/fetchSpotifyPlaylistTracks";
+import { fetchYouTubePlaylistTracks, getUserYouTubePlaylists } from "@/lib/helpers/fetchYouTubePlaylistTracks";
+import { createSpotifyPlaylist } from "@/lib/helpers/createSpotifyPlaylist";
+import { createYouTubePlaylist } from "@/lib/helpers/createYouTubePlaylist";
+import { addToSpotifyPlaylist } from "@/lib/helpers/addToSpotifyPlaylist";
+import { addToYouTubePlaylist } from "@/lib/helpers/addToYoutubePlaylist";
 import { toast } from "react-toastify";
-import { Song } from "@/app/types";
+import { Song } from "@/types";
 import PlatformSelector from "../PlatformSelector";
 
 interface MovePlaylistModalProps {
@@ -105,7 +105,7 @@ export default function MovePlaylistModal({ isOpen, onClose }: MovePlaylistModal
 
         try {
             if (platform === "spotify") {
-                const { accessToken } = await import("@/app/helpers/getSpotifyToken").then(m => m.getSpotifyTokens());
+                const { accessToken } = await import("@/lib/helpers/getSpotifyToken").then(m => m.getSpotifyTokens());
                 if (accessToken) {
                     const data = await getUserPlaylists(accessToken);
                     setPlaylists(data.map((pl: any) => ({
@@ -117,7 +117,7 @@ export default function MovePlaylistModal({ isOpen, onClose }: MovePlaylistModal
                     toast.warning("Spotify token alınamadı or expired.");
                 }
             } else if (platform === "youtube") {
-                const { accessToken } = await import("@/app/helpers/getSpotifyToken").then(m => m.getYouTubeTokens());
+                const { accessToken } = await import("@/lib/helpers/getSpotifyToken").then(m => m.getYouTubeTokens());
                 if (accessToken) {
                     const data = await getUserYouTubePlaylists(accessToken);
                     setPlaylists(data.map((pl) => ({
@@ -157,7 +157,7 @@ export default function MovePlaylistModal({ isOpen, onClose }: MovePlaylistModal
             const currentPageToken = isLoadMore ? youtubePageToken : undefined;
 
             if (sourcePlatform === "spotify") {
-                const { accessToken } = await import("@/app/helpers/getSpotifyToken").then(m => m.getSpotifyTokens());
+                const { accessToken } = await import("@/lib/helpers/getSpotifyToken").then(m => m.getSpotifyTokens());
                 if (accessToken) {
                     newTracks = await fetchSpotifyPlaylistTracks(selectedPlaylist.id, accessToken, MAX_TRACKS, currentOffset);
                     if (newTracks.length === MAX_TRACKS) {
@@ -168,7 +168,7 @@ export default function MovePlaylistModal({ isOpen, onClose }: MovePlaylistModal
                     }
                 }
             } else if (sourcePlatform === "youtube") {
-                const { accessToken } = await import("@/app/helpers/getSpotifyToken").then(m => m.getYouTubeTokens());
+                const { accessToken } = await import("@/lib/helpers/getSpotifyToken").then(m => m.getYouTubeTokens());
                 if (accessToken) {
                     const result = await fetchYouTubePlaylistTracks(selectedPlaylist.id, accessToken, MAX_TRACKS, currentPageToken);
                     newTracks = result.tracks;
@@ -234,7 +234,7 @@ export default function MovePlaylistModal({ isOpen, onClose }: MovePlaylistModal
 
             // Initial Fetch (Offset 0 / No Token)
             if (sourcePlatform === "spotify") {
-                const { accessToken } = await import("@/app/helpers/getSpotifyToken").then(m => m.getSpotifyTokens());
+                const { accessToken } = await import("@/lib/helpers/getSpotifyToken").then(m => m.getSpotifyTokens());
                 if (accessToken) {
                     newTracks = await fetchSpotifyPlaylistTracks(playlist.id, accessToken, MAX_TRACKS, 0);
                     if (newTracks.length === MAX_TRACKS) {
@@ -245,7 +245,7 @@ export default function MovePlaylistModal({ isOpen, onClose }: MovePlaylistModal
                     }
                 }
             } else if (sourcePlatform === "youtube") {
-                const { accessToken } = await import("@/app/helpers/getSpotifyToken").then(m => m.getYouTubeTokens());
+                const { accessToken } = await import("@/lib/helpers/getSpotifyToken").then(m => m.getYouTubeTokens());
                 if (accessToken) {
                     const result = await fetchYouTubePlaylistTracks(playlist.id, accessToken, MAX_TRACKS, undefined);
                     newTracks = result.tracks;
@@ -282,7 +282,7 @@ export default function MovePlaylistModal({ isOpen, onClose }: MovePlaylistModal
             let newTracks: any[] = [];
 
             if (sourcePlatform === "spotify") {
-                const { accessToken } = await import("@/app/helpers/getSpotifyToken").then(m => m.getSpotifyTokens());
+                const { accessToken } = await import("@/lib/helpers/getSpotifyToken").then(m => m.getSpotifyTokens());
                 if (accessToken) {
                     newTracks = await fetchSpotifyPlaylistTracks(selectedPlaylist.id, accessToken, MAX_TRACKS, offset);
                     if (newTracks.length === MAX_TRACKS) {
@@ -293,7 +293,7 @@ export default function MovePlaylistModal({ isOpen, onClose }: MovePlaylistModal
                     }
                 }
             } else if (sourcePlatform === "youtube") {
-                const { accessToken } = await import("@/app/helpers/getSpotifyToken").then(m => m.getYouTubeTokens());
+                const { accessToken } = await import("@/lib/helpers/getSpotifyToken").then(m => m.getYouTubeTokens());
                 if (accessToken) {
                     const result = await fetchYouTubePlaylistTracks(selectedPlaylist.id, accessToken, MAX_TRACKS, youtubePageToken);
                     newTracks = result.tracks;
@@ -378,14 +378,14 @@ export default function MovePlaylistModal({ isOpen, onClose }: MovePlaylistModal
             let targetToken: string | null = null;
 
             if (targetPlatform === "spotify") {
-                const { accessToken } = await import("@/app/helpers/getSpotifyToken").then(m => m.getSpotifyTokens());
+                const { accessToken } = await import("@/lib/helpers/getSpotifyToken").then(m => m.getSpotifyTokens());
                 targetToken = accessToken;
                 if (accessToken) {
                     const pl = await createSpotifyPlaylist(accessToken, newPlaylistName);
                     targetPlaylistId = pl?.id || null;
                 }
             } else {
-                const { accessToken } = await import("@/app/helpers/getSpotifyToken").then(m => m.getYouTubeTokens());
+                const { accessToken } = await import("@/lib/helpers/getSpotifyToken").then(m => m.getYouTubeTokens());
                 targetToken = accessToken;
                 if (accessToken) {
                     const pl = await createYouTubePlaylist(accessToken, newPlaylistName);
@@ -407,7 +407,7 @@ export default function MovePlaylistModal({ isOpen, onClose }: MovePlaylistModal
             // Fresh Spotify Token for conversions
             let conversionSpotifyToken: string | null = null;
             if (profile?.is_spotify_connected) {
-                const { accessToken } = await import("@/app/helpers/getSpotifyToken").then(m => m.getSpotifyTokens());
+                const { accessToken } = await import("@/lib/helpers/getSpotifyToken").then(m => m.getSpotifyTokens());
                 conversionSpotifyToken = accessToken;
             }
 

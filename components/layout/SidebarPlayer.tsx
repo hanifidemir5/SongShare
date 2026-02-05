@@ -1,6 +1,6 @@
 "use client";
 import React from "react";
-import { usePlayer } from "@/app/contexts/PlayerContext";
+import { usePlayer } from "@/contexts/PlayerContext";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faTimes, faCompress, faExpand, faStepForward, faStepBackward } from "@fortawesome/free-solid-svg-icons";
 

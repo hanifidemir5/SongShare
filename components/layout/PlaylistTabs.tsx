@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import SongTable from "./SongTable/SongTable";
-import { Song } from "@/app/types";
-import { CustomCategory } from "@/app/contexts/SongsContext";
+import { Song } from "@/types";
+import { CustomCategory } from "@/contexts/SongsContext";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faHeadphones, faStar, faHistory, faChartLine, faGlobe, faListUl, faTrash, faExclamationTriangle, faChevronDown } from "@fortawesome/free-solid-svg-icons";
-import { useAuth } from "@/app/contexts/AuthContext";
-import { useSongs } from "@/app/contexts/SongsContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { useSongs } from "@/contexts/SongsContext";
 import { supabase } from "@/lib/supabaseClient";
 import { toast } from "react-toastify";
 
@@ -23,15 +23,38 @@ type Props = {
 
 export default function PlaylistTabs({ recommendedSongs, favoriteSongs, myPlaylistSongs, customCategories, recentlyPlayed, topTracks, globalTopTracks }: Props) {
     const { isLoggedIn, user } = useAuth();
-    const { refetchSongs } = useSongs();
+    const { refetchSongs, currentProfile } = useSongs();
 
-    // Default tab: if logged in, show recommended; if guest, show topTracks
-    const [activeTab, setActiveTab] = useState<string>(
-        isLoggedIn ? "recommended" : "topTracks"
-    );
+    // Check if viewing another user's profile
+    const isViewingOtherProfile = user && currentProfile && user.id !== currentProfile.id;
+    const hasNoContent = customCategories.length === 0 && recommendedSongs.length === 0 && favoriteSongs.length === 0;
+
+    // Default tab logic:
+    // 1. Custom Categories (if any)
+    // 2. Recently Played (if logged in and viewing own profile)
+    // 3. Top 20 (only on own profile)
+    const getInitialTab = () => {
+        // Always show first custom category if available
+        if (customCategories.length > 0) return customCategories[0].id;
+
+        // For other profiles without custom categories, return empty (will show empty state)
+        if (isViewingOtherProfile) return "";
+
+        // Own profile fallbacks
+        if (isLoggedIn && recentlyPlayed.length > 0) return "history";
+        if (topTracks && topTracks.length > 0) return "topTracks";
+        return "globalTop";
+    };
+
+    const [activeTab, setActiveTab] = useState<string>(getInitialTab());
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [categoryToDelete, setCategoryToDelete] = useState<CustomCategory | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
+
+    // Reset active tab when profile changes
+    useEffect(() => {
+        setActiveTab(getInitialTab());
+    }, [currentProfile?.id, customCategories.length]);
 
     const handleDeletePlaylist = async () => {
         if (!user || !myPlaylistSongs || myPlaylistSongs.length === 0) return;
@@ -40,7 +63,7 @@ export default function PlaylistTabs({ recommendedSongs, favoriteSongs, myPlayli
         try {
             // Delete all songs with category "myPlaylist" for this user
             const { error } = await supabase
-                .from("Song")
+                .from("song")
                 .delete()
                 .eq("addedBy", user.id)
                 .eq("category", "myPlaylist");
@@ -70,10 +93,10 @@ export default function PlaylistTabs({ recommendedSongs, favoriteSongs, myPlayli
         try {
             // Delete all songs in this category
             const { error: songError } = await supabase
-                .from("Song")
+                .from("song")
                 .delete()
                 .eq("addedBy", user.id)
-                .eq("Category", categoryToDelete.id);
+                .eq("playlist_id", categoryToDelete.id);
 
             if (songError) {
                 toast.error("Şarkılar silinirken hata oluştu!");
@@ -82,7 +105,7 @@ export default function PlaylistTabs({ recommendedSongs, favoriteSongs, myPlayli
 
             // Delete the category itself
             const { error: catError } = await supabase
-                .from("Category")
+                .from("playlist")
                 .delete()
                 .eq("id", categoryToDelete.id)
                 .eq("user_id", user.id);
@@ -105,6 +128,28 @@ export default function PlaylistTabs({ recommendedSongs, favoriteSongs, myPlayli
         }
     };
 
+    // Show empty state for other users with no playlists
+    if (isViewingOtherProfile && hasNoContent) {
+        return (
+            <div className="space-y-6">
+                <div className="flex flex-col items-center justify-center py-16 px-4">
+                    <div className="w-20 h-20 rounded-full bg-gray-800/50 flex items-center justify-center mb-6">
+                        <FontAwesomeIcon icon={faListUl} className="w-8 h-8 text-gray-500" />
+                    </div>
+                    <h3 className="text-xl font-semibold text-white mb-2">
+                        Henüz Playlist Yok
+                    </h3>
+                    <p className="text-gray-400 text-center max-w-md">
+                        <span className="font-medium text-indigo-400">{currentProfile?.name || 'Bu kullanıcı'}</span> henüz bir playlist oluşturmamış.
+                    </p>
+                </div>
+            </div>
+        );
+    }
+
+    // Determine if Top 20 tabs should be shown (only on own profile)
+    const showSystemPlaylists = !isViewingOtherProfile;
+
     return (
         <div className="space-y-6">
             {/* Tab Navigation */}
@@ -117,11 +162,6 @@ export default function PlaylistTabs({ recommendedSongs, favoriteSongs, myPlayli
                 >
                     {isLoggedIn && (
                         <>
-                            <option value="recommended">Şu Sıralar Dinlediklerim</option>
-                            <option value="favorites">Favoriler</option>
-                            {myPlaylistSongs && myPlaylistSongs.length > 0 && (
-                                <option value="myPlaylist">Benim Playlistim ({myPlaylistSongs?.length})</option>
-                            )}
                             {customCategories.map((category) => (
                                 <option key={category.id} value={category.id}>
                                     {category.name} ({category.songCount})
@@ -132,10 +172,10 @@ export default function PlaylistTabs({ recommendedSongs, favoriteSongs, myPlayli
                             )}
                         </>
                     )}
-                    {topTracks && topTracks.length > 0 && (
+                    {showSystemPlaylists && topTracks && topTracks.length > 0 && (
                         <option value="topTracks">Türkiye Top 20</option>
                     )}
-                    {globalTopTracks && globalTopTracks.length > 0 && (
+                    {showSystemPlaylists && globalTopTracks && globalTopTracks.length > 0 && (
                         <option value="globalTop">Global Top 20</option>
                     )}
                 </select>
@@ -150,41 +190,6 @@ export default function PlaylistTabs({ recommendedSongs, favoriteSongs, myPlayli
                 {/* Only show these tabs for logged in users */}
                 {isLoggedIn && (
                     <>
-                        <button
-                            onClick={() => setActiveTab("recommended")}
-                            className={`flex items-center gap-2 px-3 md:px-6 py-2.5 rounded-lg text-xs md:text-sm font-medium transition-all duration-300 ${activeTab === "recommended"
-                                ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/25"
-                                : "text-gray-400 hover:text-white hover:bg-white/5"
-                                }`}
-                        >
-                            <FontAwesomeIcon icon={faHeadphones} className={activeTab === "recommended" ? "animate-bounce-slow" : ""} />
-                            Şu Sıralar Dinlediklerim
-                        </button>
-                        <button
-                            onClick={() => setActiveTab("favorites")}
-                            className={`flex items-center gap-2 px-3 md:px-6 py-2.5 rounded-lg text-xs md:text-sm font-medium transition-all duration-300 ${activeTab === "favorites"
-                                ? "bg-yellow-500 text-white shadow-lg shadow-yellow-500/25"
-                                : "text-gray-400 hover:text-white hover:bg-white/5"
-                                }`}
-                        >
-                            <FontAwesomeIcon icon={faStar} className={activeTab === "favorites" ? "text-white" : "text-yellow-500"} />
-                            Favoriler
-                        </button>
-
-                        {/* Benim Playlistim - only show if there are songs */}
-                        {myPlaylistSongs && myPlaylistSongs.length > 0 && (
-                            <button
-                                onClick={() => setActiveTab("myPlaylist")}
-                                className={`flex items-center gap-2 px-3 md:px-6 py-2.5 rounded-lg text-xs md:text-sm font-medium transition-all duration-300 ${activeTab === "myPlaylist"
-                                    ? "bg-purple-600 text-white shadow-lg shadow-purple-500/25"
-                                    : "text-gray-400 hover:text-white hover:bg-white/5"
-                                    }`}
-                            >
-                                <FontAwesomeIcon icon={faListUl} className={activeTab === "myPlaylist" ? "text-white" : "text-purple-400"} />
-                                Benim Playlistim
-                            </button>
-                        )}
-
                         {/* Custom Categories - Dynamic Tabs */}
                         {customCategories.map((category) => (
                             <button
@@ -217,8 +222,8 @@ export default function PlaylistTabs({ recommendedSongs, favoriteSongs, myPlayli
                     </>
                 )}
 
-                {/* Turkey Top 20 - visible to everyone */}
-                {topTracks && topTracks.length > 0 && (
+                {/* Turkey Top 20 - visible only on own profile */}
+                {showSystemPlaylists && topTracks && topTracks.length > 0 && (
                     <button
                         onClick={() => setActiveTab("topTracks")}
                         className={`flex items-center gap-2 px-3 md:px-6 py-2.5 rounded-lg text-xs md:text-sm font-medium transition-all duration-300 ${activeTab === "topTracks"
@@ -231,8 +236,8 @@ export default function PlaylistTabs({ recommendedSongs, favoriteSongs, myPlayli
                     </button>
                 )}
 
-                {/* Global Top 20 - visible to everyone */}
-                {globalTopTracks && globalTopTracks.length > 0 && (
+                {/* Global Top 20 - visible only on own profile */}
+                {showSystemPlaylists && globalTopTracks && globalTopTracks.length > 0 && (
                     <button
                         onClick={() => setActiveTab("globalTop")}
                         className={`flex items-center gap-2 px-3 md:px-6 py-2.5 rounded-lg text-xs md:text-sm font-medium transition-all duration-300 ${activeTab === "globalTop"
@@ -248,44 +253,6 @@ export default function PlaylistTabs({ recommendedSongs, favoriteSongs, myPlayli
 
             {/* Tab Content */}
             <div className="transition-all duration-300 ease-in-out">
-                {activeTab === "recommended" && isLoggedIn && (
-                    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                        <SongTable
-                            title="Şu Sıralar Dinlediklerim"
-                            songs={recommendedSongs}
-                        />
-                    </div>
-                )}
-                {activeTab === "favorites" && isLoggedIn && (
-                    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                        <SongTable
-                            title="Tüm Zamanlar En Sevdiklerim"
-                            songs={favoriteSongs}
-                        />
-                    </div>
-                )}
-                {activeTab === "myPlaylist" && isLoggedIn && myPlaylistSongs && (
-                    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                        <div className="flex items-center justify-between mb-4">
-                            <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-                                <FontAwesomeIcon icon={faListUl} className="text-purple-400" />
-                                Benim Playlistim
-                                <span className="text-sm text-gray-400 font-normal">({myPlaylistSongs.length} şarkı)</span>
-                            </h2>
-                            <button
-                                onClick={() => setShowDeleteModal(true)}
-                                className="flex items-center gap-2 px-4 py-2 bg-red-600/20 hover:bg-red-600/40 border border-red-500/30 text-red-400 hover:text-red-300 rounded-lg text-sm font-medium transition-all"
-                            >
-                                <FontAwesomeIcon icon={faTrash} className="w-3.5 h-3.5" />
-                                Playlisti Sil
-                            </button>
-                        </div>
-                        <SongTable
-                            title=""
-                            songs={myPlaylistSongs}
-                        />
-                    </div>
-                )}
                 {/* Custom Categories - Dynamic Content */}
                 {customCategories.map((category) => (
                     activeTab === category.id && isLoggedIn && (
@@ -296,13 +263,15 @@ export default function PlaylistTabs({ recommendedSongs, favoriteSongs, myPlayli
                                     {category.name}
                                     <span className="text-sm text-gray-400 font-normal">({category.songCount} şarkı)</span>
                                 </h2>
-                                <button
-                                    onClick={() => setCategoryToDelete(category)}
-                                    className="flex items-center gap-2 px-4 py-2 bg-red-600/20 hover:bg-red-600/40 border border-red-500/30 text-red-400 hover:text-red-300 rounded-lg text-sm font-medium transition-all"
-                                >
-                                    <FontAwesomeIcon icon={faTrash} className="w-3.5 h-3.5" />
-                                    Kategoriyi Sil
-                                </button>
+                                {!isViewingOtherProfile && (
+                                    <button
+                                        onClick={() => setCategoryToDelete(category)}
+                                        className="flex items-center gap-2 px-4 py-2 bg-red-600/20 hover:bg-red-600/40 border border-red-500/30 text-red-400 hover:text-red-300 rounded-lg text-sm font-medium transition-all"
+                                    >
+                                        <FontAwesomeIcon icon={faTrash} className="w-3.5 h-3.5" />
+                                        Kategoriyi Sil
+                                    </button>
+                                )}
                             </div>
                             <SongTable
                                 title=""
@@ -316,22 +285,25 @@ export default function PlaylistTabs({ recommendedSongs, favoriteSongs, myPlayli
                         <SongTable
                             title="Spotify Son Çalınanlar"
                             songs={recentlyPlayed}
+                            isSystemPlaylist={true}
                         />
                     </div>
                 )}
-                {activeTab === "topTracks" && topTracks && (
+                {showSystemPlaylists && activeTab === "topTracks" && topTracks && (
                     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
                         <SongTable
                             title="Türkiye Top 20"
                             songs={topTracks}
+                            isSystemPlaylist={true}
                         />
                     </div>
                 )}
-                {activeTab === "globalTop" && globalTopTracks && (
+                {showSystemPlaylists && activeTab === "globalTop" && globalTopTracks && (
                     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
                         <SongTable
                             title="Global Top 20"
                             songs={globalTopTracks}
+                            isSystemPlaylist={true}
                         />
                     </div>
                 )}

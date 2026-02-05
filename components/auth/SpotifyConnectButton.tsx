@@ -1,5 +1,5 @@
 "use client";
-import { useAuth } from "@/app/contexts/AuthContext";
+import { useAuth } from "@/contexts/AuthContext";
 import React from "react";
 
 // Props interface'ine artık gerek yok, çünkü veriyi context'ten alacağız.
@@ -22,8 +22,8 @@ const SpotifyConnectButton = () => {
         <button
           className={
             isConnected
-              ? "hover:bg-red-500 hover:text-white bg-gray-100 text-left px-3 py-2 rounded-md text-green-700 transition-colors"
-              : "bg-green-600 hover:bg-green-500 text-left px-3 py-2 rounded-md text-white transition-colors"
+              ? "hover:bg-red-500 hover:text-white bg-transparent text-left px-3 py-2 rounded-md text-green-700 transition-colors w-full"
+              : "bg-green-600 hover:bg-green-500 text-left px-3 py-2 rounded-md text-white transition-colors w-full"
           }
           onClick={async () => {
             // Fonksiyonları asenkron çağırıp hata yönetimi eklemek iyi bir pratiktir

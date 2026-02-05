@@ -5,11 +5,9 @@ import { toast } from "react-toastify";
 import { useEffect, useState, Suspense } from "react";
 import Header from "@/components/Header";
 import PlaylistTabs from "@/components/layout/PlaylistTabs";
-import AddSong from "@/components/operaitons/AddSong";
-import { useSongs } from "./contexts/SongsContext";
-import { useAuth } from "./contexts/AuthContext";
-
-import GroupManagement from "@/components/GroupManagement";
+import AddSong from "@/components/operations/AddSong";
+import { useSongs } from "@/contexts/SongsContext";
+import { useAuth } from "@/contexts/AuthContext";
 
 // Separate component to handle search params inside Suspense
 function SearchParamsHandler() {
@@ -37,6 +35,7 @@ function SearchParamsHandler() {
 }
 
 export default function HomePage() {
+  const [searchQuery, setSearchQuery] = useState("");
   const {
     recommendedSongs,
     favoriteSongs,
@@ -52,7 +51,16 @@ export default function HomePage() {
   } = useSongs();
   const { user } = useAuth();
 
-  const [showGroupModal, setShowGroupModal] = useState(false);
+  // Filter function for search
+  const filterSongs = (songs: any[]) => {
+    if (!searchQuery.trim()) return songs;
+    const query = searchQuery.toLowerCase();
+    return songs.filter(
+      (song) =>
+        song.title?.toLowerCase().includes(query) ||
+        song.artist?.toLowerCase().includes(query)
+    );
+  };
 
   return (
     <main className="container py-8 space-y-8">
@@ -63,53 +71,26 @@ export default function HomePage() {
 
       <Header
         profileList={profileList}
-        onSearch={() => { }}
+        onSearch={(q) => setSearchQuery(q)}
         currentProfile={currentProfile}
         setCurrentProfile={setCurrentProfile}
         user={user}
       />
 
-      {/* Group Management Button - only for logged in users */}
-      {user && (
-        <button
-          onClick={() => setShowGroupModal(true)}
-          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
-        >
-          <span>👥</span> Grup İşlemleri
-        </button>
-      )}
-
-      {/* Group Modal */}
-      {showGroupModal && (
-        <div
-          className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
-          onClick={() => setShowGroupModal(false)}
-        >
-          <div
-            className="w-full max-w-2xl bg-[#0a0a0a] border border-white/10 rounded-2xl shadow-2xl relative max-h-[90vh] overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              onClick={() => setShowGroupModal(false)}
-              className="absolute top-4 right-4 text-gray-400 hover:text-white z-10"
-            >
-              ✕
-            </button>
-            <GroupManagement />
-          </div>
-        </div>
-      )}
 
       <AddSong />
 
       <PlaylistTabs
-        recommendedSongs={recommendedSongs}
-        favoriteSongs={favoriteSongs}
-        myPlaylistSongs={myPlaylistSongs}
-        customCategories={customCategories}
-        recentlyPlayed={recentlyPlayed}
-        topTracks={topTracks}
-        globalTopTracks={globalTopTracks}
+        recommendedSongs={filterSongs(recommendedSongs)}
+        favoriteSongs={filterSongs(favoriteSongs)}
+        myPlaylistSongs={filterSongs(myPlaylistSongs)}
+        customCategories={customCategories.map(cat => ({
+          ...cat,
+          songs: filterSongs(cat.songs)
+        }))}
+        recentlyPlayed={filterSongs(recentlyPlayed)}
+        topTracks={filterSongs(topTracks)}
+        globalTopTracks={filterSongs(globalTopTracks)}
       />
     </main>
   );

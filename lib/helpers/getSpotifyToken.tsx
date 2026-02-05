@@ -26,10 +26,10 @@ export async function getYouTubeTokens() {
     // Try 'youtube' first (as saved in handleYouTubeCallback)
     let tokens = await getValidToken(user.id, "youtube");
 
-    // Fallback to 'google' if needed (sometimes saved as google provider)
-    if (!tokens || !tokens.accessToken) {
-      tokens = await getValidToken(user.id, "google");
-    }
+    // Fallback removed: we strictly use 'youtube' as provider now.
+    // if (!tokens || !tokens.accessToken) {
+    //   tokens = await getValidToken(user.id, "google");
+    // }
 
     return tokens || { accessToken: null, refreshToken: null };
   } catch (err) {

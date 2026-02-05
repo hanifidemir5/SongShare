@@ -26,6 +26,15 @@ export async function createYouTubePlaylist(
 
         console.log("[DEBUG] Creating YouTube playlist with body:", requestBody);
 
+        // DEBUG: Check token info
+        try {
+            const tokenInfoRes = await fetch(`https://www.googleapis.com/oauth2/v1/tokeninfo?access_token=${accessToken}`);
+            const tokenInfo = await tokenInfoRes.json();
+            console.log("[DEBUG] Token Info:", tokenInfo);
+        } catch (e) {
+            console.error("[DEBUG] Could not verify token info:", e);
+        }
+
         const response = await fetch(
             "https://www.googleapis.com/youtube/v3/playlists?part=snippet,status",
             {
@@ -42,6 +51,8 @@ export async function createYouTubePlaylist(
 
         if (!response.ok) {
             const errorData = await response.json();
+            console.error("[DEBUG] ❌ Failed to create YouTube playlist (FULL):", JSON.stringify(errorData, null, 2));
+
             console.error("[DEBUG] ❌ Failed to create YouTube playlist:", {
                 status: response.status,
                 statusText: response.statusText,

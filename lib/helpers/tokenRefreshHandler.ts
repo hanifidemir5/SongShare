@@ -81,7 +81,12 @@ async function refreshYouTubeToken(
 
         if (!response.ok) {
             const errorData = await response.json();
-            console.error("YouTube token refresh failed:", errorData);
+
+            if (errorData.error === 'invalid_grant') {
+                console.warn("YouTube token refresh failed: Token expired/revoked. User needs to re-authenticate.");
+            } else {
+                console.error("YouTube token refresh failed:", errorData);
+            }
             return null;
         }
 
@@ -106,7 +111,7 @@ async function refreshYouTubeToken(
 export async function getValidToken(
     userId: string,
     provider: "spotify" | "youtube" | "google"
-): Promise<{ accessToken: string | null; refreshToken: string | null }> {
+): Promise<{ accessToken: string | null; refreshToken: string | null; updatedAt?: string }> {
     try {
         // First, try to get the token from the database
         const tokens = await getUserToken(userId, provider);
@@ -116,9 +121,16 @@ export async function getValidToken(
             return { accessToken: null, refreshToken: null };
         }
 
-        // If we have a refresh token, try to refresh the access token proactively
-        // This is useful because we can't easily detect if a token is expired without making an API call
-        if (tokens.refreshToken) {
+        // Check if token is expired (older than 50 mins)
+        // Default to refresh if no updated_at (legacy data)
+        const TOKEN_EXPIRY_MS = 50 * 60 * 1000; // 50 minutes
+        const now = new Date().getTime();
+        const updatedAt = tokens.updatedAt ? new Date(tokens.updatedAt).getTime() : 0;
+        const isExpired = (now - updatedAt) > TOKEN_EXPIRY_MS;
+
+        // If we have a refresh token AND it's expired, try to refresh
+        if (tokens.refreshToken && isExpired) {
+            console.log(`Token for ${provider} is expired or nearing expiry. Refreshing...`);
             let refreshedTokens: { accessToken: string; refreshToken: string } | null = null;
 
             if (provider === "spotify") {
@@ -129,11 +141,14 @@ export async function getValidToken(
 
             // If refresh was successful, return the new token
             if (refreshedTokens) {
-                return refreshedTokens;
+                return { ...refreshedTokens, updatedAt: new Date().toISOString() }; // Mock update time for return
             }
 
-            // If refresh failed, fall back to the existing token (it might still be valid)
-            console.warn(`Token refresh failed for ${provider}, using existing token`);
+            // If refresh failed, and we KNOW it was expired, return null to force re-login
+            console.warn(`Token refresh failed for ${provider} and token is expired.`);
+            return { accessToken: null, refreshToken: null };
+        } else {
+            console.log(`Using valid cached ${provider} token (Age: ${Math.round((now - updatedAt) / 60000)} mins)`);
         }
 
         // Return the existing token if no refresh token is available or refresh failed

@@ -42,7 +42,7 @@ export async function getUserToken(
 ) {
     const { data, error } = await supabase
         .from("user_tokens")
-        .select("access_token, refresh_token")
+        .select("access_token, refresh_token, updated_at")
         .eq("user_id", userId)
         .eq("provider", provider)
         .single();
@@ -55,5 +55,6 @@ export async function getUserToken(
     return {
         accessToken: data.access_token,
         refreshToken: data.refresh_token,
+        updatedAt: data.updated_at,
     };
 }

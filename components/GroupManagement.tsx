@@ -1,12 +1,12 @@
 "use client";
 import React, { useState } from 'react';
-import { useSongs } from '@/app/contexts/SongsContext';
-import { useAuth } from "@/app/contexts/AuthContext";
+import { useSongs } from '@/contexts/SongsContext';
+import { useAuth } from "@/contexts/AuthContext";
 import { toast } from 'react-toastify';
 
 export default function GroupManagement() {
     const { profile } = useAuth();
-    const { createGroup, joinGroup, leaveGroup, currentProfile } = useSongs();
+    const { createGroup, joinGroup, leaveGroup, currentProfile, groupDetails } = useSongs();
     const [joinCode, setJoinCode] = useState('');
     const [newGroupName, setNewGroupName] = useState('');
     const [mode, setMode] = useState<'view' | 'join' | 'create'>('view');
@@ -28,17 +28,11 @@ export default function GroupManagement() {
                     <p className="text-gray-400 text-sm mb-1">Davet Kodu</p>
                     <div className="flex items-center gap-3">
                         <code className="text-2xl font-mono text-indigo-400 tracking-wider font-bold">
-                            {/* We need to fetch the actual group code/name, storing it in profile or fetching via separate query would be better. 
-                                For NOW, assume currentProfile won't have it directly unless we expanded the fetch. 
-                                ACTUALLY: Let's fetch group details in SongsContext or just display user status. 
-                                I'll assume for MVP we might not show the code here unless we fetched it. 
-                                Let's add 'groupDetails' to SongsContext. */}
-                            {/* Placeholder if data missing, logic will be fixed in Context */}
-                            {currentProfile['group_id'] || '******'}
+                            {groupDetails?.code || '******'}
                         </code>
                         <button
                             onClick={() => {
-                                navigator.clipboard.writeText(currentProfile['group_id'] || '');
+                                navigator.clipboard.writeText(groupDetails?.code || '');
                                 toast.success("Kopyalandı!");
                             }}
                             className="text-xs bg-white/10 hover:bg-white/20 px-2 py-1 rounded transition-colors"

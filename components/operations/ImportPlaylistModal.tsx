@@ -3,18 +3,18 @@ import React, { useState, useEffect } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSpotify, faYoutube } from "@fortawesome/free-brands-svg-icons";
 import { faTimes, faArrowLeft, faMusic, faCheck } from "@fortawesome/free-solid-svg-icons";
-import { useAuth } from "@/app/contexts/AuthContext";
-import { useSongs } from "@/app/contexts/SongsContext";
-import { getUserPlaylists } from "@/app/helpers/spotifyApi";
-import { fetchSpotifyPlaylistTracks } from "@/app/helpers/fetchSpotifyPlaylistTracks";
-import { fetchYouTubePlaylistTracks, getUserYouTubePlaylists } from "@/app/helpers/fetchYouTubePlaylistTracks";
-import { getSpotifyIdFromYouTubeUrl } from "@/app/helpers/getSpotifyIdFromYouTubeUrl";
-import { getYouTubeIdFromSpotifyUrl } from "@/app/helpers/getYouTubeUrlFromSpotify";
-import { getUserToken } from "@/app/helpers/tokenManager";
+import { useAuth } from "@/contexts/AuthContext";
+import { useSongs } from "@/contexts/SongsContext";
+import { getUserPlaylists } from "@/lib/helpers/spotifyApi";
+import { fetchSpotifyPlaylistTracks } from "@/lib/helpers/fetchSpotifyPlaylistTracks";
+import { fetchYouTubePlaylistTracks, getUserYouTubePlaylists } from "@/lib/helpers/fetchYouTubePlaylistTracks";
+import { getSpotifyIdFromYouTubeUrl } from "@/lib/helpers/getSpotifyIdFromYouTubeUrl";
+import { getYouTubeIdFromSpotifyUrl } from "@/lib/helpers/getYouTubeUrlFromSpotify";
+import { getUserToken } from "@/lib/helpers/tokenManager";
 import { supabase } from "@/lib/supabaseClient";
 import { v4 as uuidv4 } from "uuid";
 import { toast } from "react-toastify";
-import { Profile } from "@/app/types";
+import { Profile } from "@/types";
 
 interface ImportPlaylistModalProps {
     isOpen: boolean;
@@ -139,11 +139,12 @@ export default function ImportPlaylistModal({ isOpen, onClose }: ImportPlaylistM
 
                 if (youtubeToken) {
                     console.log("DEBUG: Fetching tracks for playlist:", playlist.id);
-                    fetchedTracks = await fetchYouTubePlaylistTracks(
+                    const result = await fetchYouTubePlaylistTracks(
                         playlist.id,
                         youtubeToken,
                         MAX_TRACKS
                     );
+                    fetchedTracks = result.tracks;
                     console.log("DEBUG: Fetched Tracks Count:", fetchedTracks.length);
                 } else {
                     console.error("DEBUG: No YouTube token found during track fetch");
@@ -181,7 +182,7 @@ export default function ImportPlaylistModal({ isOpen, onClose }: ImportPlaylistM
         try {
             // STEP 1: Create category first
             const { data: existingCategory } = await supabase
-                .from("Category")
+                .from("playlist")
                 .select("name")
                 .eq("name", trimmedCategoryName)
                 .eq("user_id", user.id)
@@ -195,11 +196,12 @@ export default function ImportPlaylistModal({ isOpen, onClose }: ImportPlaylistM
 
             // Insert new category and get its ID
             const { data: newCategory, error: categoryError } = await supabase
-                .from("Category")
+                .from("playlist")
                 .insert({
                     user_id: user.id,
                     name: trimmedCategoryName,
                     category_type: "custom",
+                    subtitle: "",
                     created_at: new Date().toISOString(),
                     updated_at: new Date().toISOString(),
                 })
@@ -215,7 +217,7 @@ export default function ImportPlaylistModal({ isOpen, onClose }: ImportPlaylistM
 
             const categoryId = newCategory.id;
 
-            // STEP 2: For Spotify tracks, fetch YouTube URLs
+            // STEP 2a: For Spotify tracks, fetch YouTube URLs
             let enrichedTracks = tracksToImport;
             if (platform === "spotify" && profile?.spotify_access_token) {
                 const youtubeApiKey = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
@@ -245,6 +247,35 @@ export default function ImportPlaylistModal({ isOpen, onClose }: ImportPlaylistM
                 );
             }
 
+            // STEP 2b: For YouTube tracks, fetch Spotify URLs
+            if (platform === "youtube" && profile?.spotify_access_token) {
+                const youtubeApiKey = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
+                const totalTracks = tracksToImport.length;
+
+                enrichedTracks = await Promise.all(
+                    tracksToImport.map(async (track, idx) => {
+                        try {
+                            // Only fetch Spotify URL if we have a YouTube URL but no Spotify URL
+                            if (track.youtubeUrl && !track.spotifyUrl) {
+                                const spotifyId = await getSpotifyIdFromYouTubeUrl(
+                                    track.youtubeUrl,
+                                    youtubeApiKey,
+                                    profile.spotify_access_token
+                                );
+                                if (spotifyId) {
+                                    track.spotifyUrl = `https://open.spotify.com/track/${spotifyId}`;
+                                }
+                            }
+                        } catch (err) {
+                            console.warn(`Could not fetch Spotify URL for ${track.title}:`, err);
+                        }
+                        // Update progress during Spotify fetching (first 40%)
+                        setImportProgress(Math.round(((idx + 1) / totalTracks) * 40));
+                        return track;
+                    })
+                );
+            }
+
             // STEP 3: Check for existing songs to prevent duplicates (in this category)
             const spotifyUrls = enrichedTracks
                 .filter(t => t.spotifyUrl)
@@ -256,10 +287,10 @@ export default function ImportPlaylistModal({ isOpen, onClose }: ImportPlaylistM
             let existingUrls = new Set<string>();
             if (spotifyUrls.length > 0 || youtubeUrls.length > 0) {
                 const { data: existingSongs } = await supabase
-                    .from("Song")
+                    .from("song")
                     .select("spotifyUrl, youtubeUrl")
                     .eq("addedBy", user.id)
-                    .eq("Category", categoryId);
+                    .eq("playlist_id", categoryId);
 
                 if (existingSongs) {
                     existingSongs.forEach((song: { spotifyUrl?: string; youtubeUrl?: string }) => {
@@ -292,14 +323,14 @@ export default function ImportPlaylistModal({ isOpen, onClose }: ImportPlaylistM
                 spotifyUrl: track.spotifyUrl || null,
                 youtubeUrl: track.youtubeUrl || null,
                 addedBy: user.id,
-                Category: categoryId, // Use category ID!
+                playlist_id: categoryId, // Use playlist ID!
             }));
 
             // Insert in batches to show progress (40-100%)
             const batchSize = 10;
             for (let i = 0; i < songsToInsert.length; i += batchSize) {
                 const batch = songsToInsert.slice(i, i + batchSize);
-                const { error } = await supabase.from("Song").insert(batch);
+                const { error } = await supabase.from("song").insert(batch);
 
                 if (error) {
                     console.error("Error inserting songs:", JSON.stringify(error, null, 2));

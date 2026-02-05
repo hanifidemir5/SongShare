@@ -2,7 +2,8 @@
 import React, { createContext, useContext, ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabaseClient";
-import { Song, Profile } from "../types";
+import { Song, Profile } from "@/types";
+import { getSpotifyTokens } from "@/lib/helpers/getSpotifyToken";
 
 export interface CustomCategory {
   id: string;
@@ -25,9 +26,11 @@ interface SongsContextValue {
   setCurrentProfile: (profile: Profile) => void;
   profileList: Profile[];
   refetchSongs: () => void;
+  refreshData: () => Promise<void>;
   createGroup: (name: string) => Promise<void>;
   joinGroup: (code: string) => Promise<void>;
   leaveGroup: () => Promise<void>;
+  groupDetails: { id: string; name: string; code: string } | null;
 }
 
 const SongsContext = createContext<SongsContextValue | undefined>(undefined);
@@ -51,6 +54,7 @@ export const SongsProvider = ({ children }: Props) => {
   const [globalTopTracks, setGlobalTopTracks] = React.useState<Song[]>([]);
   const [groupSongs, setGroupSongs] = React.useState<Song[]>([]);
   const [customCategories, setCustomCategories] = React.useState<CustomCategory[]>([]);
+  const [groupDetails, setGroupDetails] = React.useState<{ id: string; name: string; code: string } | null>(null);
   const [globalCategoryIds, setGlobalCategoryIds] = React.useState<{
     recommended?: string;
     favorites?: string;
@@ -60,7 +64,7 @@ export const SongsProvider = ({ children }: Props) => {
   // Fetch global category IDs once
   const fetchGlobalCategories = async () => {
     const { data, error } = await supabase
-      .from('Category')
+      .from('playlist')
       .select('id, name')
       .is('user_id', null);
 
@@ -91,16 +95,23 @@ export const SongsProvider = ({ children }: Props) => {
     }
 
     // Get current user's profile to check group_id
-    const { data: myProfile } = await supabase
+    const { data: myProfile, error: profileError } = await supabase
       .from("profiles")
       .select("*")
       .eq("id", user.id)
       .single();
 
-    if (!myProfile) {
+    if (profileError || !myProfile) {
+      console.error("Error fetching own profile:", profileError);
+      // Even if profile fetch fails, we still need to set something to prevent infinite loading
+      // Try to create a minimal profile object so the UI doesn't hang
       setProfileList([]);
+      setCurrentProfile(null);
       return;
     }
+
+    // Set current profile immediately so loading can proceed
+    setCurrentProfile(myProfile);
 
     let query = supabase.from("profiles").select("*");
 
@@ -115,16 +126,18 @@ export const SongsProvider = ({ children }: Props) => {
     const { data, error } = await query;
 
     if (error) {
-      // Silently handle error
+      console.error("Error fetching profiles list:", error);
+      // Still set profile list with own profile so UI works
+      setProfileList([myProfile]);
       return;
     }
 
-    setProfileList(data ?? []);
+    setProfileList(data ?? [myProfile]);
 
-    // Set current profile to user's own profile
-    if (data && data.length > 0) {
-      const ownProfile = data.find(p => p.id === user.id);
-      setCurrentProfile(ownProfile || data[0]);
+    // Ensure current profile is the user's own profile (or first in list)
+    const ownProfile = data?.find(p => p.id === user.id);
+    if (ownProfile) {
+      setCurrentProfile(ownProfile);
     }
   };
 
@@ -132,11 +145,36 @@ export const SongsProvider = ({ children }: Props) => {
     fetchProfiles();
   }, []);
 
+  // Fetch group details when profile has group_id
+  const fetchGroupDetails = async () => {
+    if (!currentProfile?.group_id) {
+      setGroupDetails(null);
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from('groups')
+      .select('id, name, code')
+      .eq('id', currentProfile.group_id)
+      .single();
+
+    if (error || !data) {
+      setGroupDetails(null);
+      return;
+    }
+
+    setGroupDetails(data);
+  };
+
+  React.useEffect(() => {
+    fetchGroupDetails();
+  }, [currentProfile?.group_id]);
+
   // Fetch songs for currentUser using React Query
   const fetchSongs = async (): Promise<Song[]> => {
     if (!currentProfile) return [];
     const { data, error } = await supabase
-      .from("Song")
+      .from("song")
       .select("*")
       .eq("addedBy", currentProfile.id);
     if (error) throw error;
@@ -163,7 +201,7 @@ export const SongsProvider = ({ children }: Props) => {
 
       // 2. Fetch songs added by these members
       const { data: songs, error: songError } = await supabase
-        .from('Song')
+        .from('song')
         .select('*')
         .in('addedBy', memberIds)
         .order('created_at', { ascending: false });
@@ -187,10 +225,10 @@ export const SongsProvider = ({ children }: Props) => {
     try {
       // 1. Fetch all custom categories for this user
       const { data: categories, error: catError } = await supabase
-        .from('Category')
+        .from('playlist')
         .select('id, name')
         .eq('user_id', currentProfile.id)
-        .eq('category_type', 'custom')
+        .or('category_type.eq.custom,category_type.is.null')
         .order('created_at', { ascending: false });
 
       if (catError) throw catError;
@@ -204,10 +242,10 @@ export const SongsProvider = ({ children }: Props) => {
       const categoriesWithSongs: CustomCategory[] = await Promise.all(
         categories.map(async (cat) => {
           const { data: songs, error: songError } = await supabase
-            .from('Song')
+            .from('song')
             .select('*')
             .eq('addedBy', currentProfile.id)
-            .eq('Category', cat.id)
+            .eq('playlist_id', cat.id)
             .order('created_at', { ascending: false });
 
           if (songError) {
@@ -235,6 +273,16 @@ export const SongsProvider = ({ children }: Props) => {
       console.error("Error fetching custom categories:", error);
       setCustomCategories([]);
     }
+  };
+
+  // Exposed refresh function
+  const refreshData = async () => {
+    await Promise.all([
+      fetchCustomCategories(),
+      fetchGroupSongs(),
+      fetchSpotifyHistory(),
+      refetchSongs()
+    ]);
   };
 
   // Group Actions
@@ -319,21 +367,28 @@ export const SongsProvider = ({ children }: Props) => {
 
   // Fetch Spotify History
   const fetchSpotifyHistory = async () => {
-    if (!currentProfile?.is_spotify_connected || !currentProfile?.spotify_access_token) {
+    if (!currentProfile?.is_spotify_connected) {
       setRecentlyPlayed([]);
       return;
     }
 
     try {
+      // Use helper to get a guaranteed valid token (refreshes if needed)
+      const { accessToken } = await getSpotifyTokens();
+
+      if (!accessToken) {
+        console.warn("Could not get valid Spotify token for history");
+        return;
+      }
+
       const response = await fetch("https://api.spotify.com/v1/me/player/recently-played?limit=10", {
         headers: {
-          Authorization: `Bearer ${currentProfile.spotify_access_token}`
+          Authorization: `Bearer ${accessToken}`
         }
       });
 
       if (response.status === 401) {
-        console.warn("Spotify token expired or invalid.");
-        // Optionally clear token here or handle refresh
+        console.warn("Spotify token expired or invalid (even after refresh check).");
         return;
       }
 
@@ -443,21 +498,21 @@ export const SongsProvider = ({ children }: Props) => {
   }, []);
 
   const recommendedSongs = songs
-    .filter((s) => s.Category === globalCategoryIds.recommended)
+    .filter((s) => s.playlist_id === globalCategoryIds.recommended)
     .sort(
       (a, b) =>
         new Date(b.created_at ?? 0).getTime() -
         new Date(a.created_at ?? 0).getTime()
     );
   const favoriteSongs = songs
-    .filter((s) => s.Category === globalCategoryIds.favorites)
+    .filter((s) => s.playlist_id === globalCategoryIds.favorites)
     .sort(
       (a, b) =>
         new Date(b.created_at ?? 0).getTime() -
         new Date(a.created_at ?? 0).getTime()
     );
   const myPlaylistSongs = songs
-    .filter((s) => s.Category === globalCategoryIds.myPlaylist)
+    .filter((s) => s.playlist_id === globalCategoryIds.myPlaylist)
     .sort(
       (a, b) =>
         new Date(b.created_at ?? 0).getTime() -
@@ -480,9 +535,11 @@ export const SongsProvider = ({ children }: Props) => {
         setCurrentProfile,
         profileList,
         refetchSongs,
+        refreshData,
         createGroup,
         joinGroup,
-        leaveGroup
+        leaveGroup,
+        groupDetails
       }}
     >
       {children}

@@ -43,7 +43,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const getInitialSession = async () => {
       console.log("DEBUG: AuthContext - getInitialSession started");
       try {
-        const { data } = await supabase.auth.getSession();
+        // Add timeout to prevent getSession from hanging forever
+        // This can happen with corrupted localStorage or network issues
+        const timeoutPromise = new Promise<{ data: { session: null } }>((resolve) => {
+          setTimeout(() => {
+            console.warn("DEBUG: AuthContext - getSession timed out after 5s, proceeding without session");
+            resolve({ data: { session: null } });
+          }, 5000);
+        });
+
+        const sessionPromise = supabase.auth.getSession();
+        const { data } = await Promise.race([sessionPromise, timeoutPromise]);
+
         const authUser = data.session?.user ?? null;
         console.log("DEBUG: AuthContext - Session retrieved", { hasUser: !!authUser, userId: authUser?.id });
 
